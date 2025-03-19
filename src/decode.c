@@ -195,13 +195,8 @@ static inline bool error_correction_u8(
 
     /* Correction */
     if (corrections && erasure_positions) {
-        j = 0;
-
         for (i = 0; i < error_count; i++) {
-            if (pprn->buffer->coefficients[i]) {
-                corrections[j] = pprn->buffer->coefficients[i];
-                erasure_positions[j++] = pprn->buffer->error_locations[i] - padding_length;
-            }
+            data[erasure_positions[i]] ^= pprn->buffer->coefficients[i];
         }
     } else if (data && parity) {
         for (i = 0; i < error_count; i++) {
@@ -326,7 +321,7 @@ extern bool poporon_decode_u8_with_erasure(poporon_t *pprn, uint8_t *data, size_
         goto finish;
     }
 
-    success = error_correction_u8(pprn, data, size, NULL, pprn->buffer->syndrome, eras->erasure_count, eras->erasure_positions, eras->corrections, padding_length, &errors_corrected);
+    success = error_correction_u8(pprn, data, size, parity, pprn->buffer->syndrome, eras->erasure_count, eras->erasure_positions, eras->corrections, padding_length, &errors_corrected);
 
 finish:
     if (corrected_num) {
