@@ -20,6 +20,21 @@ if(POPORON_TESTING)
   
   set(POPORON_TEST_LINK_LIBRARIES ${CMAKE_PROJECT_NAME} unity)
 
+  if(POPORON_ENABLE_COVERAGE)
+    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/coverage)
+    add_custom_target(coverage
+      COMMAND ${LCOV} --initial --directory ${CMAKE_BINARY_DIR} --capture --output-file ${CMAKE_BINARY_DIR}/coverage/base.info
+      COMMAND ${CMAKE_CTEST_COMMAND} -C ${CMAKE_BUILD_TYPE}
+      COMMAND ${LCOV} --directory ${CMAKE_BINARY_DIR} --capture --output-file ${CMAKE_BINARY_DIR}/coverage/test.info
+      COMMAND ${LCOV} --add-tracefile ${CMAKE_BINARY_DIR}/coverage/base.info --add-tracefile ${CMAKE_BINARY_DIR}/coverage/test.info --output-file ${CMAKE_BINARY_DIR}/coverage/total.info
+      COMMAND ${LCOV} --remove ${CMAKE_BINARY_DIR}/coverage/total.info --output-file ${CMAKE_BINARY_DIR}/coverage/filtered.info
+      COMMAND ${GENHTML} --demangle-cpp --legend --title "${CMAKE_PROJECT_NAME} Coverage Report" --output-directory ${CMAKE_BINARY_DIR}/coverage/html ${CMAKE_BINARY_DIR}/coverage/filtered.info
+      COMMENT "Generating coverage report with lcov/gcov"
+    )
+
+    message(STATUS "Coverage report generation target 'coverage' is now available")
+  endif()
+
   file(GLOB TEST_SOURCES "tests/test_*.c")
 
   CHECK_INCLUDE_FILE(fec.h HAVE_FEC_H)

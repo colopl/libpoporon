@@ -17,17 +17,52 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(GNUInstallDirs)
 
-option(BUILD_TESTING "Build tests" ON)
 option(POPORON_USE_VALGRIND "Use Valgrind if available" ON)
-set(POPORON_TESTING ${BUILD_TESTING})
+option(POPORON_USE_COVERAGE "Use coverage if available" OFF)
 
-find_program(VALGRIND "valgrind")
-if(POPORON_TESTING AND POPORON_USE_VALGRIND AND VALGRIND AND NOT EMSCRIPTEN)
-  include(cmake/valgrind.cmake)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
 
-  set(POPORON_ENABLE_VALGRIND ON)
-else()
-  set(POPORON_ENABLE_VALGRIND OFF)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(POPORON_TESTING ON)
+endif()
+
+if(POPORON_TESTING AND NOT EMSCRIPTEN)
+  message(STATUS "Enabled testing")
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0 -fno-inline -fno-omit-frame-pointer")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -fno-inline -fno-omit-frame-pointer")
+
+  find_program(VALGRIND "valgrind")
+  if(POPORON_USE_VALGRIND AND VALGRIND)
+    message(STATUS "Found Valgrind: ${VALGRIND}")
+    set(POPORON_ENABLE_VALGRIND ON)
+  else()
+    set(POPORON_ENABLE_VALGRIND OFF)
+  endif()
+
+  if(POPORON_USE_COVERAGE)
+    find_program(LCOV lcov)
+    find_program(GENHTML genhtml)
+    
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+      if(LCOV AND GENHTML)
+        set(POPORON_ENABLE_COVERAGE ON)
+
+        if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+          link_libraries(gcov)
+        endif()
+      else()
+        message(WARNING "lcov or genhtml not found, disabling coverage")
+        set(POPORON_ENABLE_COVERAGE OFF)
+      endif()
+    else()
+      message(WARNING "Coverage is supported only with GCC compilers")
+      set(POPORON_ENABLE_COVERAGE OFF)
+    endif()
+  else()
+    set(POPORON_ENABLE_COVERAGE OFF)
+  endif()
 endif()
 
 file(GLOB SOURCES "src/*.c")
@@ -42,7 +77,16 @@ target_include_directories(poporon-obj PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+if(POPORON_ENABLE_COVERAGE)
+  target_compile_options(poporon-obj PRIVATE "--coverage")
+  target_link_options(poporon-obj PRIVATE "--coverage")
+endif()
+
 add_library(poporon STATIC $<TARGET_OBJECTS:poporon-obj>)
+
+if(POPORON_ENABLE_COVERAGE)
+  target_link_options(poporon PRIVATE "--coverage")
+endif()
 
 install(
   FILES ${HEADERS}
