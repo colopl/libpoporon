@@ -1,5 +1,5 @@
 /*
- * libpoporon test - test_util.h
+ * libpoporon test - fec_compat.c
  * 
  * Copyright (c) 2025 Go Kudo
  *
@@ -38,7 +38,6 @@ void tearDown(void)
 
 void test_fec(void)
 {
-    printf("fec_k: %d\n", FEC_K);
     void *rs;
     int i, error_locations[NUMBER_OF_ROOTS] = {0};
     unsigned char *data, *broken_data, *parity, *codeword;
@@ -85,7 +84,7 @@ void test_fec(void)
     free_rs_char(rs);
 }
 
-void test_fec_u8(void)
+void test_compat(void)
 {
     poporon_t *pprn;
     uint8_t *data_pprn, *broken_data_pprn, *parity_pprn;
@@ -161,7 +160,7 @@ int main(void)
     UNITY_BEGIN();
     
     RUN_TEST(test_fec);
-    RUN_TEST(test_fec_u8);
+    RUN_TEST(test_compat);
 
     return UNITY_END();
 }

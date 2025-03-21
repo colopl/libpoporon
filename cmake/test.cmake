@@ -18,7 +18,7 @@ if(POPORON_TESTING)
 
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
   
-  set(POPORON_TEST_LINK_LIBRARIES ${CMAKE_PROJECT_NAME} unity)
+  set(POPORON_TEST_LINK_LIBRARIES poporon unity)
 
   if(POPORON_ENABLE_COVERAGE)
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/coverage)
@@ -28,7 +28,7 @@ if(POPORON_TESTING)
       COMMAND ${LCOV} --directory ${CMAKE_BINARY_DIR} --capture --output-file ${CMAKE_BINARY_DIR}/coverage/test.info
       COMMAND ${LCOV} --add-tracefile ${CMAKE_BINARY_DIR}/coverage/base.info --add-tracefile ${CMAKE_BINARY_DIR}/coverage/test.info --output-file ${CMAKE_BINARY_DIR}/coverage/total.info
       COMMAND ${LCOV} --remove ${CMAKE_BINARY_DIR}/coverage/total.info --output-file ${CMAKE_BINARY_DIR}/coverage/filtered.info
-      COMMAND ${GENHTML} --demangle-cpp --legend --title "${CMAKE_PROJECT_NAME} Coverage Report" --output-directory ${CMAKE_BINARY_DIR}/coverage/html ${CMAKE_BINARY_DIR}/coverage/filtered.info
+      COMMAND ${GENHTML} --demangle-cpp --legend --title "poporon Coverage Report" --output-directory ${CMAKE_BINARY_DIR}/coverage/html ${CMAKE_BINARY_DIR}/coverage/filtered.info
       COMMENT "Generating coverage report with lcov/gcov"
     )
 
@@ -41,7 +41,7 @@ if(POPORON_TESTING)
   
   if(HAVE_FEC_H)
     message(STATUS "Found fec.h header, enabling FEC compatibility tests")
-    file(GLOB FEC_TEST_SOURCES "tests/testfec_*.c")
+    file(GLOB FEC_TEST_SOURCES "tests/fec_*.c")
     list(APPEND TEST_SOURCES ${FEC_TEST_SOURCES})
     list(APPEND POPORON_TEST_LINK_LIBRARIES fec)
   else()
@@ -50,13 +50,14 @@ if(POPORON_TESTING)
   
   foreach(TEST_SOURCE ${TEST_SOURCES})
     get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
+    set(TEST_NAME "poporon_${TEST_NAME}")
   
     add_executable(${TEST_NAME} ${TEST_SOURCE})
-    
-    if(TEST_NAME MATCHES "^test_")
-      target_link_libraries(${TEST_NAME} PRIVATE ${CMAKE_PROJECT_NAME} unity)
-    elseif(TEST_NAME MATCHES "^testfec_")
-      target_link_libraries(${TEST_NAME} PRIVATE ${CMAKE_PROJECT_NAME} unity fec)
+
+    if(HAVE_FEC_H)
+      target_link_libraries(${TEST_NAME} PRIVATE poporon unity fec)
+    else()
+      target_link_libraries(${TEST_NAME} PRIVATE poporon unity)
     endif()
     
     target_include_directories(${TEST_NAME} PRIVATE ${unity_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/include)
@@ -69,7 +70,7 @@ if(POPORON_TESTING)
   
     if(POPORON_ENABLE_VALGRIND)
       add_test(
-        NAME valgrind_${TEST_NAME}
+        NAME ${TEST_NAME}_valgrind
         COMMAND ${VALGRIND} 
           "--tool=memcheck"
           "--leak-check=full"
