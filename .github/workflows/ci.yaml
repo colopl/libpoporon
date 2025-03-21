@@ -80,6 +80,6 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -G "${{ matrix.vs_version.generator }}" -A "${{ matrix.architecture }}" -DENABLE_LIBCORRECT_TEST=ON
+          cmake .. -G "${{ matrix.vs_version.generator }}" -A "${{ matrix.architecture }}"
           cmake --build . --config "${{ matrix.type }}" --parallel
           ctest -C "${{ matrix.type }}" --output-on-failure
