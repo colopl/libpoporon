@@ -19,17 +19,16 @@ include(GNUInstallDirs)
 
 option(POPORON_USE_VALGRIND "Use Valgrind if available" OFF)
 option(POPORON_USE_COVERAGE "Use coverage if available" OFF)
+option(POPORON_USE_TESTS "Use tests" OFF)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(POPORON_TESTING ON)
-endif()
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT EMSCRIPTEN)
+  message(STATUS "Enabled debug")
+  set(POPORON_USE_TESTS ON)
 
-if(POPORON_TESTING AND NOT EMSCRIPTEN)
-  message(STATUS "Enabled testing")
   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0 -fno-inline -fno-omit-frame-pointer")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -fno-inline -fno-omit-frame-pointer")
 
@@ -103,6 +102,6 @@ install(
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-if(POPORON_TESTING)
+if(POPORON_USE_TESTS)
   include(cmake/test.cmake)
 endif()

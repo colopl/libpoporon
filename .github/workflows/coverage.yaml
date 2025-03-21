@@ -30,7 +30,7 @@ jobs:
         run: |
           cmake -B "build" -DCMAKE_BUILD_TYPE="Debug" -DPOPORON_USE_COVERAGE=ON
       - name: Build
-        run: cmake --build "build"
+        run: cmake --build "build" --parallel
       - name: Generate coverage report
         run: |
           cd "build"

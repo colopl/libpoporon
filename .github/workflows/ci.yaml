@@ -54,7 +54,7 @@ jobs:
         run: |
           mkdir "build"
           cd "build"
-          cmake .. -DCMAKE_BUILD_TYPE="${{ matrix.type }}"
+          cmake .. -DCMAKE_BUILD_TYPE="${{ matrix.type }}" -DPOPORON_USE_TESTS=ON
           cmake --build . --config "${{ matrix.type }}" --parallel
           ctest -C "${{ matrix.type }}" --output-on-failure
   Windows:
@@ -78,8 +78,8 @@ jobs:
       - name: Build and test
         shell: cmd
         run: |
-          mkdir build
-          cd build
-          cmake .. -G "${{ matrix.vs_version.generator }}" -A "${{ matrix.architecture }}"
+          mkdir "build"
+          cd "build"
+          cmake .. -G "${{ matrix.vs_version.generator }}" -A "${{ matrix.architecture }}" -DCMAKE_BUILD_TYPE="${{ matrix.type }}" -DPOPORON_USE_TESTS=ON
           cmake --build . --config "${{ matrix.type }}" --parallel
           ctest -C "${{ matrix.type }}" --output-on-failure
