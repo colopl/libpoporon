@@ -17,7 +17,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(GNUInstallDirs)
 
-option(POPORON_USE_VALGRIND "Use Valgrind if available" ON)
+option(POPORON_USE_VALGRIND "Use Valgrind if available" OFF)
 option(POPORON_USE_COVERAGE "Use coverage if available" OFF)
 
 if(NOT CMAKE_BUILD_TYPE)
