@@ -46,6 +46,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT EMSCRIPTEN AND NOT MSVC)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU")
       if(LCOV AND GENHTML)
         set(POPORON_ENABLE_COVERAGE ON)
+        add_definitions(-DPOPORON_COVERAGE)
 
         if(CMAKE_C_COMPILER_ID MATCHES "GNU")
           link_libraries(gcov)
