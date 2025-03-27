@@ -10,7 +10,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "common.h"
+#include "poporon_internal.h"
 
 void poporon_rs_destroy(poporon_rs_t *rs)
 {
@@ -23,10 +23,10 @@ void poporon_rs_destroy(poporon_rs_t *rs)
     }
 
     if (rs->generator_polynomial) {
-        free(rs->generator_polynomial);
+        pfree(rs->generator_polynomial);
     }
 
-    free(rs);
+    pfree(rs);
 }
 
 poporon_rs_t *poporon_rs_create(uint8_t symbol_size, uint16_t generator_polynomial, uint16_t first_consective_root, uint16_t primitive_element, uint8_t num_roots)
@@ -40,20 +40,24 @@ poporon_rs_t *poporon_rs_create(uint8_t symbol_size, uint16_t generator_polynomi
         return NULL;
     }
 
-    rs = (poporon_rs_t *)malloc(sizeof(poporon_rs_t));
+    rs = (poporon_rs_t *)pmalloc(sizeof(poporon_rs_t));
     if (!rs) {
+        /* LCOV_EXCL_START */
         poporon_gf_destroy(gf);
         return NULL;
+        /* LCOV_EXCL_STOP */
     }
 
     rs->gf = gf;
     rs->first_consective_root = first_consective_root;
     rs->primitive_element = primitive_element;
     rs->num_roots = num_roots;
-    rs->generator_polynomial = (uint16_t *)malloc((num_roots + 1) * sizeof(uint16_t));
+    rs->generator_polynomial = (uint16_t *)pmalloc((num_roots + 1) * sizeof(uint16_t));
     if (!rs->generator_polynomial) {
+        /* LCOV_EXCL_START */
         poporon_rs_destroy(rs);
         return NULL;
+        /* LCOV_EXCL_STOP */
     }
     
     rs->generator_polynomial[0] = 1;

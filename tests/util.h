@@ -1,5 +1,5 @@
 /*
- * libpoporon test - test_util.h
+ * libpoporon test - util.h
  * 
  * Copyright (c) 2025 Go Kudo
  *

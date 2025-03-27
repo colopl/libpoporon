@@ -9,14 +9,17 @@
  * SPDX-FileCopyrightText: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: BSD-3-Clause
  */
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 #include <fec.h>
 
-#include "poporon.h"
-#include "test_util.h"
+#include <poporon.h>
+
+#include "util.h"
+
 #include "unity.h"
 
 #define SYMBOL_SIZE             8

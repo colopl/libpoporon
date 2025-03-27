@@ -10,19 +10,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "common.h"
+#include "poporon_internal.h"
 
 extern void poporon_erasure_destroy(poporon_erasure_t *erasure)
 {
     if (erasure) {
         if (erasure->erasure_positions) {
-            free(erasure->erasure_positions);
+            pfree(erasure->erasure_positions);
         }
         if (erasure->corrections) {
-            free(erasure->corrections);
+            pfree(erasure->corrections);
         }
 
-        free(erasure);
+        pfree(erasure);
     }
 }
 
@@ -33,23 +33,27 @@ extern poporon_erasure_t *poporon_erasure_create(uint16_t num_roots, uint32_t in
 
     capacity = (initial_capacity > 0) ? initial_capacity : (uint32_t)num_roots;
 
-    erasure = (poporon_erasure_t *)malloc(sizeof(poporon_erasure_t));
+    erasure = (poporon_erasure_t *)pmalloc(sizeof(poporon_erasure_t));
     if (!erasure) {
-        return NULL;
+        return NULL; /* LCOV_EXCL_LINE */
     }
     erasure->erasure_positions = NULL;
     erasure->corrections = NULL;
 
-    erasure->erasure_positions = (uint32_t *)malloc(capacity * sizeof(uint32_t));
+    erasure->erasure_positions = (uint32_t *)pmalloc(capacity * sizeof(uint32_t));
     if (!erasure->erasure_positions) {
+        /* LCOV_EXCL_START */
         poporon_erasure_destroy(erasure);
         return NULL;
+        /* LCOV_EXCL_STOP */
     }
 
-    erasure->corrections = (uint16_t *)malloc(capacity * sizeof(uint16_t));
+    erasure->corrections = (uint16_t *)pmalloc(capacity * sizeof(uint16_t));
     if (!erasure->corrections) {
+        /* LCOV_EXCL_START */
         poporon_erasure_destroy(erasure);
         return NULL;
+        /* LCOV_EXCL_STOP */
     }
 
     erasure->capacity = capacity;
@@ -71,10 +75,10 @@ extern poporon_erasure_t *poporon_erasure_create_from_positions(uint16_t num_roo
 
     erasure = poporon_erasure_create(num_roots, capacity);
     if (!erasure) {
-        return NULL;
+        return NULL; /* LCOV_EXCL_LINE */
     }
 
-    memcpy(erasure->erasure_positions, erasure_positions, erasure_count * sizeof(uint32_t));
+    pmemcpy(erasure->erasure_positions, erasure_positions, erasure_count * sizeof(uint32_t));
     erasure->erasure_count = erasure_count;
 
     return erasure;
@@ -95,18 +99,20 @@ extern bool poporon_erasure_add_position(poporon_erasure_t *erasure, uint32_t po
             new_capacity = erasure->capacity + 32;
         }
         
-        new_positions = (uint32_t *)realloc(erasure->erasure_positions, new_capacity * sizeof(uint32_t));
-        new_corrections = (uint16_t *)realloc(erasure->corrections, new_capacity * sizeof(uint16_t));
+        new_positions = (uint32_t *)prealloc(erasure->erasure_positions, new_capacity * sizeof(uint32_t));
+        new_corrections = (uint16_t *)prealloc(erasure->corrections, new_capacity * sizeof(uint16_t));
 
         if (!new_positions || !new_corrections) {
+            /* LCOV_EXCL_START */
             if (new_positions) {
-                free(new_positions);
+                pfree(new_positions);
             }
             if (new_corrections) {
-                free(new_corrections);
+                pfree(new_corrections);
             }
 
             return false;
+            /* LCOV_EXCL_STOP */
         }
 
         erasure->erasure_positions = new_positions;

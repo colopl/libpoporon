@@ -10,7 +10,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "common.h"
+#include "poporon_internal.h"
 
 extern void poporon_gf_destroy(poporon_gf_t *gf)
 {
@@ -19,14 +19,14 @@ extern void poporon_gf_destroy(poporon_gf_t *gf)
     }
 
     if (gf->exp2log) {
-        free(gf->exp2log);
+        pfree(gf->exp2log);
     }
 
     if (gf->log2exp) {
-        free(gf->log2exp);
+        pfree(gf->log2exp);
     }
     
-    free(gf);
+    pfree(gf);
 }
 
 extern poporon_gf_t *poporon_gf_create(uint8_t symbol_size, uint16_t generator_polynomial)
@@ -39,7 +39,7 @@ extern poporon_gf_t *poporon_gf_create(uint8_t symbol_size, uint16_t generator_p
         return NULL;
     }
     
-    gf = (poporon_gf_t *)malloc(sizeof(poporon_gf_t));
+    gf = (poporon_gf_t *)pmalloc(sizeof(poporon_gf_t));
     if (!gf) {
         return NULL;
     }
@@ -48,13 +48,13 @@ extern poporon_gf_t *poporon_gf_create(uint8_t symbol_size, uint16_t generator_p
     gf->field_size = (1 << symbol_size) - 1;
     gf->generator_polynomial = generator_polynomial;
     
-    gf->log2exp = (uint16_t *)malloc((gf->field_size + 1) * sizeof(uint16_t));
+    gf->log2exp = (uint16_t *)pmalloc((gf->field_size + 1) * sizeof(uint16_t));
     if (!gf->log2exp) {
         poporon_gf_destroy(gf);
         return NULL;
     }
     
-    gf->exp2log = (uint16_t *)malloc((gf->field_size + 1) * sizeof(uint16_t));
+    gf->exp2log = (uint16_t *)pmalloc((gf->field_size + 1) * sizeof(uint16_t));
     if (!gf->exp2log) {
         poporon_gf_destroy(gf);
         return NULL;

@@ -14,9 +14,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "poporon.h"
+#include <poporon.h>
 
-#include "test_util.h"
+#include "util.h"
+
 #include "unity.h"
 
 #define NUMBER_OF_ROOTS         16

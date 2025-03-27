@@ -10,7 +10,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "common.h"
+#include "poporon_internal.h"
 
 extern bool poporon_encode_u8(poporon_t *pprn, uint8_t *data, size_t size, uint8_t *parity)
 {
@@ -20,7 +20,7 @@ extern bool poporon_encode_u8(poporon_t *pprn, uint8_t *data, size_t size, uint8
         return false;
     }
 
-    memset(parity, 0, pprn->rs->num_roots * sizeof(uint8_t));
+    pmemset(parity, 0, pprn->rs->num_roots * sizeof(uint8_t));
 
     for (i = 0; i < size; i++) {
         fb = pprn->rs->gf->exp2log[(((uint16_t)data[i]) & ((uint16_t)pprn->rs->gf->field_size)) ^ parity[0]];
@@ -31,7 +31,7 @@ extern bool poporon_encode_u8(poporon_t *pprn, uint8_t *data, size_t size, uint8
             }
         }
         
-        memmove(&parity[0], &parity[1], sizeof(uint8_t) * (pprn->rs->num_roots - 1));
+        pmemmove(&parity[0], &parity[1], sizeof(uint8_t) * (pprn->rs->num_roots - 1));
         
         if (fb != pprn->rs->gf->field_size) {
             parity[pprn->rs->num_roots - 1] = pprn->rs->gf->log2exp[gf_mod(pprn->rs->gf, fb + pprn->rs->generator_polynomial[0])];

@@ -1,5 +1,5 @@
 /*
- * libpoporon - common.h
+ * libpoporon - poporon_internal.h
  * 
  * Copyright (c) 2025 Go Kudo
  *
@@ -10,17 +10,17 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifndef POPORON_COMMON_H
-#define POPORON_COMMON_H
+#ifndef POPORON_INTERNAL_H
+#define POPORON_INTERNAL_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include "poporon.h"
+#include <poporon.h>
 
-#include "poporon/gf.h"
-#include "poporon/rs.h"
+#include <poporon/gf.h>
+#include <poporon/rs.h>
 
 struct _poporon_erasure_t {
     uint32_t capacity;
@@ -62,21 +62,32 @@ struct _poporon_t {
     decoder_buffer_t *buffer;
 };
 
+#define pmemcpy(dest, src, size)            memcpy(dest, src, size)
+#define pmemmove(dest, src, size)           memmove(dest, src, size)
+#define pmemcmp(s1, s2, size)               memcmp(s1, s2, size)
+#define pmemset(dest, value, size)          memset(dest, value, size)
+#define pmalloc(size)                       malloc(size)
+#define pcalloc(count, size)                calloc(count, size)
+#define prealloc(ptr, size)                 realloc(ptr, size)
+#define pfree(ptr)                          free(ptr)
+
 static inline decoder_buffer_t *decoder_buffer_create(uint16_t num_roots)
 {
     decoder_buffer_t *buffer;
     uint16_t *raw_buffer;
     uint32_t i;
     
-    buffer = (decoder_buffer_t *)malloc(sizeof(decoder_buffer_t));
+    buffer = (decoder_buffer_t *)pmalloc(sizeof(decoder_buffer_t));
     if (!buffer) {
-        return NULL;
+        return NULL; /* LCOV_EXCL_LINE */
     }
     
-    raw_buffer = (uint16_t *)malloc(8 * (num_roots + 1) * sizeof(uint16_t));
+    raw_buffer = (uint16_t *)pmalloc(8 * (num_roots + 1) * sizeof(uint16_t));
     if (!raw_buffer) {
-        free(buffer);
+        /* LCOV_EXCL_START */
+        pfree(buffer);
         return NULL;
+        /* LCOV_EXCL_STOP */
     }
     
     buffer->primitive_inverse = 0;
@@ -98,12 +109,8 @@ static inline decoder_buffer_t *decoder_buffer_create(uint16_t num_roots)
 
 static inline void decoder_buffer_destroy(decoder_buffer_t *buffer)
 {
-    if (!buffer) {
-        return;
-    }
-
-    free(buffer->error_locator);
-    free(buffer);
+    pfree(buffer->error_locator);
+    pfree(buffer);
 }
 
 static inline uint8_t gf_mod(poporon_gf_t *gf, uint16_t value)
@@ -116,4 +123,4 @@ static inline uint8_t gf_mod(poporon_gf_t *gf, uint16_t value)
     return value;
 }
 
-#endif  /* POPORON_COMMON_H */
+#endif  /* POPORON_INTERNAL_H */

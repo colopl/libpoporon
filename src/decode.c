@@ -10,7 +10,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "common.h"
+#include "poporon_internal.h"
 
 static inline bool error_correction_u8(
     poporon_t *pprn, uint8_t *data, size_t size, uint8_t *parity, uint16_t *syndrome_ptr,
@@ -27,7 +27,7 @@ static inline bool error_correction_u8(
     uint8_t poly_term;
     bool success = true;
 
-    memset(&pprn->buffer->error_locator[1], 0, pprn->rs->num_roots * sizeof(pprn->buffer->error_locator[0]));
+    pmemset(&pprn->buffer->error_locator[1], 0, pprn->rs->num_roots * sizeof(pprn->buffer->error_locator[0]));
     pprn->buffer->error_locator[0] = 1;
 
     if (erasure_count > 0) {
@@ -60,7 +60,7 @@ static inline bool error_correction_u8(
         discrepancy = pprn->rs->gf->exp2log[discrepancy];
         
         if (discrepancy == pprn->rs->gf->field_size) {
-            memmove(&pprn->buffer->coefficients[1], pprn->buffer->coefficients, pprn->rs->num_roots * sizeof(pprn->buffer->coefficients[0]));
+            pmemmove(&pprn->buffer->coefficients[1], pprn->buffer->coefficients, pprn->rs->num_roots * sizeof(pprn->buffer->coefficients[0]));
             pprn->buffer->coefficients[0] = pprn->rs->gf->field_size;
         } else {
             pprn->buffer->polynomial[0] = pprn->buffer->error_locator[0];
@@ -82,11 +82,11 @@ static inline bool error_correction_u8(
                         gf_mod(pprn->rs->gf, pprn->rs->gf->exp2log[pprn->buffer->error_locator[i]] - discrepancy + pprn->rs->gf->field_size);
                 }
             } else {
-                memmove(&pprn->buffer->coefficients[1], pprn->buffer->coefficients, pprn->rs->num_roots * sizeof(pprn->buffer->coefficients[0]));
+                pmemmove(&pprn->buffer->coefficients[1], pprn->buffer->coefficients, pprn->rs->num_roots * sizeof(pprn->buffer->coefficients[0]));
                 pprn->buffer->coefficients[0] = pprn->rs->gf->field_size;
             }
 
-            memcpy(pprn->buffer->error_locator, pprn->buffer->polynomial, (pprn->rs->num_roots + 1) * sizeof(pprn->buffer->polynomial[0]));
+            pmemcpy(pprn->buffer->error_locator, pprn->buffer->polynomial, (pprn->rs->num_roots + 1) * sizeof(pprn->buffer->polynomial[0]));
         }
     }
 
@@ -104,7 +104,7 @@ static inline bool error_correction_u8(
     }
 
     /* Chien search */
-    memcpy(&pprn->buffer->register_coefficients[1], &pprn->buffer->error_locator[1], pprn->rs->num_roots * sizeof(pprn->buffer->register_coefficients[0]));
+    pmemcpy(&pprn->buffer->register_coefficients[1], &pprn->buffer->error_locator[1], pprn->rs->num_roots * sizeof(pprn->buffer->register_coefficients[0]));
     error_count = 0;
     for (i = 1, k = pprn->buffer->primitive_inverse - 1; i <= pprn->rs->gf->field_size; i++, k = gf_mod(pprn->rs->gf, k + pprn->buffer->primitive_inverse)) {
         polynomial_evaluation = 1;
