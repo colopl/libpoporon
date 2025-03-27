@@ -52,7 +52,6 @@ foreach(TEST_SOURCE ${TEST_SOURCES})
   set(TEST_NAME "poporon_${TEST_NAME}")
   
   add_executable(${TEST_NAME} ${TEST_SOURCE})
-
   if(HAVE_FEC_H)
     target_link_libraries(${TEST_NAME} PRIVATE poporon unity fec)
   else()
