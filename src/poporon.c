@@ -66,3 +66,13 @@ extern poporon_t *poporon_create(uint8_t symbol_size, uint16_t generator_polynom
     
     return pprn;
 }
+
+extern uint32_t poporon_version_id()
+{
+    return (uint32_t)POPORON_VERSION_ID;
+}
+
+extern poporon_buildtime_t poporon_buildtime()
+{
+    return (poporon_buildtime_t)POPORON_BUILDTIME;
+}

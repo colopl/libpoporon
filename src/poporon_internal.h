@@ -22,6 +22,12 @@
 #include <poporon/gf.h>
 #include <poporon/rs.h>
 
+#define POPORON_VERSION_ID 10000000
+
+#ifndef POPORON_BUILDTIME
+# define POPORON_BUILDTIME 0
+#endif
+
 struct _poporon_erasure_t {
     uint32_t capacity;
     uint32_t erasure_count;

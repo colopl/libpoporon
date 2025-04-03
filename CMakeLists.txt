@@ -15,6 +15,9 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# buildtime
+include(cmake/buildtime.cmake)
+
 include(GNUInstallDirs)
 
 option(POPORON_USE_VALGRIND "Use Valgrind if available" OFF)
