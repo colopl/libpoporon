@@ -17,15 +17,16 @@ static inline bool error_correction_u8(
     uint32_t erasure_count, uint32_t *erasure_positions, uint16_t *corrections,
     int16_t padding_length,
     size_t *errors_corrected
-)
-{
+) {
     uint32_t iteration_count, polynomial_degree;
     uint16_t error_locator_degree, error_evaluator_degree, polynomial_evaluation;
     uint16_t temp_value, numerator_value, second_numerator, denominator_value, discrepancy;
     uint16_t error_count;
     int16_t i, j, k;
     uint8_t poly_term;
-    bool success = true;
+    bool success;
+    
+    success = true;
 
     pmemset(&pprn->buffer->error_locator[1], 0, pprn->rs->num_roots * sizeof(pprn->buffer->error_locator[0]));
     pprn->buffer->error_locator[0] = 1;
@@ -212,11 +213,12 @@ static inline bool error_correction_u8(
     return true;
 }
 
-
 static inline bool calculate_syndrome_u8(poporon_t *pprn, uint8_t *data, size_t size, uint8_t *parity, uint16_t *syndrome)
 {
     int16_t i, j;
-    uint16_t syndrome_error_flag = 0;
+    uint16_t syndrome_error_flag;
+    
+    syndrome_error_flag = 0;
 
     /* Calculate syndrome from data */
     for (i = 0; i < pprn->rs->num_roots; i++) {
@@ -256,7 +258,9 @@ static inline bool calculate_syndrome_u8(poporon_t *pprn, uint8_t *data, size_t 
 
 static inline int16_t calculate_padding_length(poporon_t *pprn, size_t size)
 {
-    int16_t padding_length = pprn->rs->gf->field_size - pprn->rs->num_roots - size;
+    int16_t padding_length;
+    
+    padding_length = pprn->rs->gf->field_size - pprn->rs->num_roots - size;
     
     if (padding_length < 0 || padding_length >= pprn->rs->gf->field_size - pprn->rs->num_roots) {
         return -1;
@@ -267,30 +271,36 @@ static inline int16_t calculate_padding_length(poporon_t *pprn, size_t size)
 
 extern bool poporon_decode_u8_with_syndrome(poporon_t *pprn, uint8_t *data, uint8_t *parity, size_t size, uint16_t *syndrome, size_t *corrected_num)
 {
-    bool success = true;
-    size_t errors_corrected = 0;
+    size_t errors_corrected;
     int16_t padding_length;
     uint16_t i;
+    bool success, has_errors;
+
+    errors_corrected = 0;
+    success = false;
+    has_errors = false;
 
     if (!pprn || !data || !parity || !size || !syndrome) {
-        success = false;
         goto finish;
     }
 
     padding_length = calculate_padding_length(pprn, size);
     if (padding_length < 0) {
-        success = false;
         goto finish;
     }
 
     for (i = 0; i < pprn->rs->num_roots; i++) {
         if (syndrome[i] != pprn->rs->gf->field_size) {
-            if (!error_correction_u8(pprn, data, size, parity, syndrome, 0, NULL, NULL, padding_length, &errors_corrected)) {
-                success = false;
-                goto finish;
-            }
+            has_errors = true;
+            break;
         }
     }
+
+    if (has_errors && !error_correction_u8(pprn, data, size, parity, syndrome, 0, NULL, NULL, padding_length, &errors_corrected)) {
+        goto finish;
+    }
+
+    success = true;
 
 finish:
     if (corrected_num) {
@@ -302,26 +312,24 @@ finish:
 
 extern bool poporon_decode_u8_with_erasure(poporon_t *pprn, uint8_t *data, size_t size, uint8_t *parity, poporon_erasure_t *eras, size_t *corrected_num)
 {
-    size_t errors_corrected = 0;
+    size_t errors_corrected;
     int16_t padding_length;
-    bool success = true;
+    bool success;
+
+    errors_corrected = 0;
+    success = false;
 
     if (!pprn || !data || !parity || !eras || !size) {
-        success = false;
         goto finish;
     }
 
     padding_length = calculate_padding_length(pprn, size);
     if (padding_length < 0) {
-        success = false;
         goto finish;
     }
 
-    if (!calculate_syndrome_u8(pprn, data, size, parity, pprn->buffer->syndrome)) {
-        goto finish;
-    }
-
-    success = error_correction_u8(pprn, data, size, parity, pprn->buffer->syndrome, eras->erasure_count, eras->erasure_positions, eras->corrections, padding_length, &errors_corrected);
+    success = !calculate_syndrome_u8(pprn, data, size, parity, pprn->buffer->syndrome) 
+            || error_correction_u8(pprn, data, size, parity, pprn->buffer->syndrome, eras->erasure_count, eras->erasure_positions, eras->corrections, padding_length, &errors_corrected);
 
 finish:
     if (corrected_num) {
@@ -333,26 +341,24 @@ finish:
 
 extern bool poporon_decode_u8(poporon_t *pprn, uint8_t *data, size_t size, uint8_t *parity, size_t *corrected_num)
 {
-    size_t errors_corrected = 0;
+    size_t errors_corrected;
     int16_t padding_length;
-    bool success = true;
+    bool success;
+    
+    errors_corrected = 0;
+    success = false;
 
     if (!pprn || !data || !parity || !size) {
-        success = false;
         goto finish;
     }
 
     padding_length = calculate_padding_length(pprn, size);
     if (padding_length < 0) {
-        success = false;
         goto finish;
     }
 
-    if (!calculate_syndrome_u8(pprn, data, size, parity, pprn->buffer->syndrome)) {
-        goto finish;
-    }
-
-    success = error_correction_u8(pprn, data, size, parity, pprn->buffer->syndrome, 0, NULL, NULL, padding_length, &errors_corrected);
+    success = !calculate_syndrome_u8(pprn, data, size, parity, pprn->buffer->syndrome)
+             || error_correction_u8(pprn, data, size, parity, pprn->buffer->syndrome, 0, NULL, NULL, padding_length, &errors_corrected);
 
 finish:
     if (corrected_num) {

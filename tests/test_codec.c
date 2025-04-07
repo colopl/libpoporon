@@ -82,6 +82,7 @@ void test_decode_u8_with_syndrome(void)
     uint8_t *data, *copy_data, *parity;
     uint16_t syndrome[NUMBER_OF_ROOTS];
     size_t corrected_num;
+    uint32_t i;
     
     pprn = poporon_create(SYMBOL_SIZE, GENERATER_POLYNOMIAL, FIRST_CONSECUTIVE_ROOT, PRIMITIVE_ELEMENT, NUMBER_OF_ROOTS);
     TEST_ASSERT_NOT_NULL(pprn);
@@ -93,7 +94,6 @@ void test_decode_u8_with_syndrome(void)
     
     copy_data = (uint8_t *)malloc(DATA_SIZE);
     TEST_ASSERT_NOT_NULL(copy_data);
-    memcpy(copy_data, data, DATA_SIZE);
     
     parity = (uint8_t *)malloc(NUMBER_OF_ROOTS * sizeof(uint8_t));
     TEST_ASSERT_NOT_NULL(parity);
@@ -101,18 +101,22 @@ void test_decode_u8_with_syndrome(void)
     
     TEST_ASSERT_TRUE(poporon_encode_u8(pprn, data, DATA_SIZE, parity));
     
-    memcpy(copy_data, data, DATA_SIZE);
-    break_data(copy_data, DATA_SIZE, 1);
-    
-    TEST_ASSERT_FALSE(poporon_decode_u8_with_syndrome(NULL, copy_data, parity, DATA_SIZE, syndrome, &corrected_num));
-
+    TEST_ASSERT_FALSE(poporon_decode_u8_with_syndrome(NULL, data, parity, DATA_SIZE, syndrome, &corrected_num));
     TEST_ASSERT_FALSE(poporon_decode_u8_with_syndrome(pprn, NULL, parity, DATA_SIZE, syndrome, &corrected_num));
+    TEST_ASSERT_FALSE(poporon_decode_u8_with_syndrome(pprn, data, NULL, DATA_SIZE, syndrome, &corrected_num));
+    TEST_ASSERT_FALSE(poporon_decode_u8_with_syndrome(pprn, data, parity, 0, syndrome, &corrected_num));
+    TEST_ASSERT_FALSE(poporon_decode_u8_with_syndrome(pprn, data, parity, DATA_SIZE, NULL, &corrected_num));
     
-    TEST_ASSERT_FALSE(poporon_decode_u8_with_syndrome(pprn, copy_data, NULL, DATA_SIZE, syndrome, &corrected_num));
+    memset(syndrome, 0xFF, NUMBER_OF_ROOTS * sizeof(uint16_t));
+    for (i = 0; i < NUMBER_OF_ROOTS; i++) {
+        syndrome[i] = 0xFF;
+    }
     
-    TEST_ASSERT_FALSE(poporon_decode_u8_with_syndrome(pprn, copy_data, parity, 0, syndrome, &corrected_num));
-    
-    TEST_ASSERT_FALSE(poporon_decode_u8_with_syndrome(pprn, copy_data, parity, DATA_SIZE, NULL, &corrected_num));
+    memcpy(copy_data, data, DATA_SIZE);
+    corrected_num = 0;
+    TEST_ASSERT_TRUE(poporon_decode_u8_with_syndrome(pprn, copy_data, parity, DATA_SIZE, syndrome, &corrected_num));
+    TEST_ASSERT_EQUAL_size_t(0, corrected_num);
+    TEST_ASSERT_EQUAL_MEMORY(data, copy_data, DATA_SIZE);
     
     poporon_destroy(pprn);
     free(data);

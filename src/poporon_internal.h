@@ -82,20 +82,21 @@ static inline decoder_buffer_t *decoder_buffer_create(uint16_t num_roots)
     decoder_buffer_t *buffer;
     uint16_t *raw_buffer;
     uint32_t i;
-    
+
     buffer = (decoder_buffer_t *)pmalloc(sizeof(decoder_buffer_t));
     if (!buffer) {
         return NULL; /* LCOV_EXCL_LINE */
     }
-    
+
     raw_buffer = (uint16_t *)pmalloc(8 * (num_roots + 1) * sizeof(uint16_t));
     if (!raw_buffer) {
         /* LCOV_EXCL_START */
         pfree(buffer);
+
         return NULL;
         /* LCOV_EXCL_STOP */
     }
-    
+
     buffer->primitive_inverse = 0;
     buffer->error_locator = raw_buffer;
     buffer->syndrome = buffer->error_locator + (num_roots + 1);
@@ -105,11 +106,11 @@ static inline decoder_buffer_t *decoder_buffer_create(uint16_t num_roots)
     buffer->error_roots = buffer->error_evaluator + (num_roots + 1);
     buffer->register_coefficients = buffer->error_roots + (num_roots + 1);
     buffer->error_locations = buffer->register_coefficients + (num_roots + 1);
-    
+
     for (i = 0; i < 8 * (num_roots + 1); i++) {
         raw_buffer[i] = 0;
     }
-    
+
     return buffer;
 }
 
@@ -125,7 +126,7 @@ static inline uint8_t gf_mod(poporon_gf_t *gf, uint16_t value)
         value -= gf->field_size;
         value = (value >> gf->symbol_size) + (value & gf->field_size);
     }
-    
+
     return value;
 }
 
