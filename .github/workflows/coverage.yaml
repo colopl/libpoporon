@@ -24,8 +24,8 @@ jobs:
           fetch-depth: 1
       - name: Configure shallow submodules
         run: git config --global submodule.recurse true && git config --global submodule.fetchJobs 4
-      - name: Update submodules with shallow clone
-        run: git submodule update --init --recursive --depth 1
+      - name: Update submodules with shallow clone (Unity)
+        run: git submodule update --init --depth 1 third_party/unity
       - name: Install dependencies
         run: |
           sudo apt-get update

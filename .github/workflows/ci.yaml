@@ -32,10 +32,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Configure shallow submodules
-        run: git config --global submodule.recurse true && git config --global submodule.fetchJobs 4
-      - name: Update submodules with shallow clone
-        run: git submodule update --init --recursive --depth 1
+      - name: Update submodules with shallow clone (Unity)
+        run: git submodule update --init --depth 1 third_party/unity
+      - name: Update submodule with shallow clone (Valgrind)
+        if: matrix.platform == 'linux/amd64'
+        run: git submodule update --init --depth 1 third_party/valgrind
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -63,8 +64,8 @@ jobs:
           fetch-depth: 1
       - name: Configure shallow submodules
         run: git config --global submodule.recurse true && git config --global submodule.fetchJobs 4
-      - name: Update submodules with shallow clone
-        run: git submodule update --init --recursive --depth 1
+      - name: Update submodules with shallow clone (Unity)
+        run: git submodule update --init --depth 1 third_party/unity
       - name: Build and test
         run: |
           mkdir "build"
@@ -90,8 +91,8 @@ jobs:
           fetch-depth: 1
       - name: Configure shallow submodules
         run: git config --global submodule.recurse true && git config --global submodule.fetchJobs 4
-      - name: Update submodules with shallow clone
-        run: git submodule update --init --recursive --depth 1
+      - name: Update submodules with shallow clone (Unity)
+        run: git submodule update --init --depth 1 third_party/unity
       - name: Setup Visual Studio Developer Command Prompt
         uses: microsoft/setup-msbuild@v2
       - name: Build and test
