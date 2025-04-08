@@ -35,7 +35,7 @@ extern poporon_t *poporon_create(uint8_t symbol_size, uint16_t generator_polynom
     poporon_rs_t *rs;
     decoder_buffer_t *buffer;
     uint16_t primitive_inverse;
-    
+
     rs = poporon_rs_create(symbol_size, generator_polynomial, first_consective_root, primitive_element, num_roots);
     if (!rs) {
         return NULL;
@@ -48,10 +48,10 @@ extern poporon_t *poporon_create(uint8_t symbol_size, uint16_t generator_polynom
         return NULL;
         /* LCOV_EXCL_STOP */
     }
-    
+
     for (primitive_inverse = 1; (primitive_inverse % primitive_element) != 0; primitive_inverse += rs->gf->field_size);
     buffer->primitive_inverse = primitive_inverse / primitive_element;
-    
+
     pprn = (poporon_t *)pmalloc(sizeof(poporon_t));
     if (!pprn) {
         /* LCOV_EXCL_START */
@@ -60,10 +60,10 @@ extern poporon_t *poporon_create(uint8_t symbol_size, uint16_t generator_polynom
         return NULL;
         /* LCOV_EXCL_STOP */
     }
-    
+
     pprn->rs = rs;
     pprn->buffer = buffer;
-    
+
     return pprn;
 }
 

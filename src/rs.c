@@ -34,7 +34,7 @@ poporon_rs_t *poporon_rs_create(uint8_t symbol_size, uint16_t generator_polynomi
     poporon_rs_t *rs;
     poporon_gf_t *gf;
     uint16_t i, j, generator_root;
-    
+
     gf = poporon_gf_create(symbol_size, generator_polynomial);
     if (!gf) {
         return NULL;
@@ -59,14 +59,14 @@ poporon_rs_t *poporon_rs_create(uint8_t symbol_size, uint16_t generator_polynomi
         return NULL;
         /* LCOV_EXCL_STOP */
     }
-    
+
     rs->generator_polynomial[0] = 1;
     for (i = 0, generator_root = first_consective_root * primitive_element; 
          i < num_roots; 
          i++, generator_root += primitive_element
         ) {
         rs->generator_polynomial[i + 1] = 1;
-        
+
         for (j = i; j > 0; j--) {
             if (rs->generator_polynomial[j] != 0) {
                 rs->generator_polynomial[j] = rs->generator_polynomial[j - 1] ^
@@ -75,14 +75,14 @@ poporon_rs_t *poporon_rs_create(uint8_t symbol_size, uint16_t generator_polynomi
                 rs->generator_polynomial[j] = rs->generator_polynomial[j - 1];
             }
         }
-        
+
         rs->generator_polynomial[0] = 
             gf->log2exp[gf_mod(gf, gf->exp2log[rs->generator_polynomial[0]] + generator_root)];
     }
-    
+
     for (i = 0; i <= num_roots; i++) {
         rs->generator_polynomial[i] = gf->exp2log[rs->generator_polynomial[i]];
     }
-    
+
     return rs;
 }
