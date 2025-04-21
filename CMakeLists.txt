@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # SPDX-FileCopyrightText: 2025 Go Kudo <zeriyoshi@gmail.com>
 
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.22)
 project(poporon
   VERSION 1.0.0
   LANGUAGES C
