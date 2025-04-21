@@ -24,6 +24,8 @@ option(POPORON_USE_VALGRIND "Use Valgrind if available" OFF)
 option(POPORON_USE_COVERAGE "Use coverage if available" OFF)
 option(POPORON_USE_TESTS "Use tests" OFF)
 
+option(POPORON_ENABLE_SHARED "Enable shared library" OFF)
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()
@@ -107,4 +109,8 @@ install(
 
 if(POPORON_USE_TESTS)
   include(cmake/test.cmake)
+endif()
+
+if(POPORON_ENABLE_SHARED)
+  add_library(poporon-shared SHARED $<TARGET_OBJECTS:poporon-obj>)
 endif()
