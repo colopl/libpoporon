@@ -1,0 +1,57 @@
+name: Coverage
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  CTEST_OUTPUT_ON_FAILURE: 1
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Configure shallow submodules
+        run: git config --global submodule.recurse true && git config --global submodule.fetchJobs 4
+      - name: Update submodules with shallow clone (Unity)
+        run: git submodule update --init --depth 1 third_party/unity
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y "cmake" "gcc" "lcov"
+      - name: Configure CMake
+        run: |
+          cmake -B "build" -DCMAKE_BUILD_TYPE="Debug" -DPOPORON_USE_COVERAGE=ON -DPOPORON_USE_TESTS=ON
+      - name: Build
+        run: cmake --build "build" --parallel
+      - name: Generate coverage report
+        run: |
+          cd "build"
+          make coverage
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4.0.0
+        with:
+          path: build/coverage/html
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CTEST_OUTPUT_ON_FAILURE: 1
+
+jobs:
+  Linux:
+    strategy:
+      matrix:
+        runs-on: ['ubuntu-24.04-arm', 'ubuntu-24.04']
+        platform: ['linux/arm/v8', 'linux/i386', 'linux/amd64', 'linux/s390x']
+        image: ['debian:trixie', 'alpine:3.22.1']
+        exclude:
+          - runs-on: 'ubuntu-24.04'
+            platform: 'linux/arm/v8'
+          - runs-on: 'ubuntu-24.04-arm'
+            platform: 'linux/i386'
+          - runs-on: 'ubuntu-24.04-arm'
+            platform: 'linux/amd64'
+          - runs-on: 'ubuntu-24.04-arm'
+            platform: 'linux/s390x'
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Update submodules with shallow clone (Unity)
+        run: git submodule update --init --depth 1 third_party/unity
+      - name: Update submodule with shallow clone (Valgrind)
+        if: matrix.platform == 'linux/amd64'
+        run: git submodule update --init --depth 1 third_party/valgrind
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: "s390x"
+          cache-image: false
+      - name: Build container
+        run: |
+          docker build \
+            --build-arg ENABLE_VALGRIND="${{ matrix.platform == 'linux/amd64' && '1' || '0' }}" \
+            --build-arg PLATFORM="${{ matrix.platform }}" \
+            -t ci .
+      - name: Build and test on container
+        run: |
+          docker run --rm --platform=${{ matrix.platform }} -i ci
+  macOS:
+    strategy:
+      matrix:
+        runs-on: ['macos-13', 'macos-14', 'macos-15']
+        type: ['Debug', 'Release']
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Configure shallow submodules
+        run: git config --global submodule.recurse true && git config --global submodule.fetchJobs 4
+      - name: Update submodules with shallow clone (Unity)
+        run: git submodule update --init --depth 1 third_party/unity
+      - name: Build and test
+        run: |
+          mkdir "build"
+          cd "build"
+          cmake .. -DCMAKE_BUILD_TYPE="${{ matrix.type }}" -DPOPORON_USE_TESTS=ON
+          cmake --build . --config "${{ matrix.type }}" --parallel
+          ctest -C "${{ matrix.type }}" --output-on-failure
+  Windows:
+    strategy:
+      matrix:
+        architecture: ['x64', 'Win32']
+        type:
+          - Release
+          - Debug
+        vs_version:
+          - { runs-on: 'windows-2022', generator: 'Visual Studio 17 2022' }
+          - { runs-on: 'windows-2025', generator: 'Visual Studio 17 2022' }
+    runs-on: ${{ matrix.vs_version.runs-on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Configure shallow submodules
+        run: git config --global submodule.recurse true && git config --global submodule.fetchJobs 4
+      - name: Update submodules with shallow clone (Unity)
+        run: git submodule update --init --depth 1 third_party/unity
+      - name: Setup Visual Studio Developer Command Prompt
+        uses: microsoft/setup-msbuild@v2
+      - name: Build and test
+        shell: cmd
+        run: |
+          mkdir "build"
+          cd "build"
+          cmake .. -G "${{ matrix.vs_version.generator }}" -A "${{ matrix.architecture }}" -DCMAKE_BUILD_TYPE="${{ matrix.type }}" -DPOPORON_USE_TESTS=ON
+          cmake --build . --config "${{ matrix.type }}" --parallel
+          ctest -C "${{ matrix.type }}" --output-on-failure
