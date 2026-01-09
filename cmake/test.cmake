@@ -23,7 +23,7 @@ if(POPORON_ENABLE_COVERAGE)
     COMMAND ${CMAKE_CTEST_COMMAND} -C ${CMAKE_BUILD_TYPE}
     COMMAND ${LCOV} --directory ${CMAKE_BINARY_DIR} --capture --output-file ${CMAKE_BINARY_DIR}/coverage/test.info
     COMMAND ${LCOV} --add-tracefile ${CMAKE_BINARY_DIR}/coverage/base.info --add-tracefile ${CMAKE_BINARY_DIR}/coverage/test.info --output-file ${CMAKE_BINARY_DIR}/coverage/total.info
-    COMMAND ${LCOV} --remove ${CMAKE_BINARY_DIR}/coverage/total.info --output-file ${CMAKE_BINARY_DIR}/coverage/filtered.info
+    COMMAND ${LCOV} --remove ${CMAKE_BINARY_DIR}/coverage/total.info '/usr/*' --output-file ${CMAKE_BINARY_DIR}/coverage/filtered.info
     COMMAND ${GENHTML} --demangle-cpp --legend --title "poporon Coverage Report" --output-directory ${CMAKE_BINARY_DIR}/coverage/html ${CMAKE_BINARY_DIR}/coverage/filtered.info
     COMMENT "Generating coverage report with lcov/gcov"
   )
