@@ -15,7 +15,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "poporon/bch.h"
 #include "poporon/erasure.h"
+#include "poporon/gf.h"
+#include "poporon/ldpc.h"
+#include "poporon/rng.h"
+#include "poporon/rs.h"
 
 #ifdef __cplusplus
 extern "C" {
