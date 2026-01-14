@@ -1,8 +1,8 @@
 /*
  * libpoporon - ldpc.c
- *
+ * 
  * This file is part of libpoporon.
- *
+ * 
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */
@@ -541,7 +541,7 @@ static inline bool build_parity_check_matrix(poporon_ldpc_t *ldpc)
     }
 
     switch (ldpc->config.matrix_type) {
-    case PPRN_LDPC_QC_PEG:
+    case PPRN_LDPC_QC_RANDOM:
         return build_parity_check_matrix_qc(ldpc, col_weight);
     case PPRN_LDPC_RANDOM:
     default:

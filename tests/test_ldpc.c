@@ -1,8 +1,8 @@
 /*
  * libpoporon - test_ldpc.c
- *
+ * 
  * This file is part of libpoporon.
- *
+ * 
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */
@@ -588,7 +588,7 @@ static void test_ldpc_interleave_burst_correction(void)
     poporon_ldpc_destroy(ldpc);
 }
 
-static void test_ldpc_qc_peg_basic(void)
+static void test_ldpc_qc_random_basic(void)
 {
     poporon_ldpc_t *ldpc;
     poporon_ldpc_config_t config;
@@ -597,7 +597,7 @@ static void test_ldpc_qc_peg_basic(void)
     size_t i;
 
     TEST_ASSERT_TRUE(poporon_ldpc_config_default(&config));
-    config.matrix_type = PPRN_LDPC_QC_PEG;
+    config.matrix_type = PPRN_LDPC_QC_RANDOM;
 
     ldpc = poporon_ldpc_create(128, PPRN_LDPC_RATE_1_2, &config);
     TEST_ASSERT_NOT_NULL(ldpc);
@@ -619,7 +619,7 @@ static void test_ldpc_qc_peg_basic(void)
     poporon_ldpc_destroy(ldpc);
 }
 
-static void test_ldpc_qc_peg_with_errors(void)
+static void test_ldpc_qc_random_with_errors(void)
 {
     poporon_ldpc_t *ldpc;
     poporon_ldpc_config_t config;
@@ -628,7 +628,7 @@ static void test_ldpc_qc_peg_with_errors(void)
     size_t i;
 
     TEST_ASSERT_TRUE(poporon_ldpc_config_default(&config));
-    config.matrix_type = PPRN_LDPC_QC_PEG;
+    config.matrix_type = PPRN_LDPC_QC_RANDOM;
 
     ldpc = poporon_ldpc_create(128, PPRN_LDPC_RATE_1_2, &config);
     TEST_ASSERT_NOT_NULL(ldpc);
@@ -655,7 +655,7 @@ static void test_ldpc_qc_peg_with_errors(void)
     poporon_ldpc_destroy(ldpc);
 }
 
-static void test_ldpc_qc_peg_various_rates(void)
+static void test_ldpc_qc_random_various_rates(void)
 {
     poporon_ldpc_rate_t rates[] = {PPRN_LDPC_RATE_1_2, PPRN_LDPC_RATE_2_3, PPRN_LDPC_RATE_3_4, PPRN_LDPC_RATE_5_6};
     poporon_ldpc_t *ldpc;
@@ -665,7 +665,7 @@ static void test_ldpc_qc_peg_various_rates(void)
     size_t i, r, num_rates = sizeof(rates) / sizeof(rates[0]), info_size, parity_size, codeword_size;
 
     TEST_ASSERT_TRUE(poporon_ldpc_config_default(&config));
-    config.matrix_type = PPRN_LDPC_QC_PEG;
+    config.matrix_type = PPRN_LDPC_QC_RANDOM;
 
     for (r = 0; r < num_rates; r++) {
         ldpc = poporon_ldpc_create(128, rates[r], &config);
@@ -699,7 +699,7 @@ static void test_ldpc_qc_peg_various_rates(void)
     }
 }
 
-static void test_ldpc_qc_peg_with_interleaver(void)
+static void test_ldpc_qc_random_with_interleaver(void)
 {
     poporon_ldpc_t *ldpc;
     poporon_ldpc_config_t config;
@@ -708,7 +708,7 @@ static void test_ldpc_qc_peg_with_interleaver(void)
     size_t i;
 
     TEST_ASSERT_TRUE(poporon_ldpc_config_burst_resistant(&config));
-    config.matrix_type = PPRN_LDPC_QC_PEG;
+    config.matrix_type = PPRN_LDPC_QC_RANDOM;
 
     ldpc = poporon_ldpc_create(128, PPRN_LDPC_RATE_1_2, &config);
     TEST_ASSERT_NOT_NULL(ldpc);
@@ -754,10 +754,10 @@ int main(void)
     RUN_TEST(test_ldpc_burst_error_resistance);
     RUN_TEST(test_ldpc_interleave_api);
     RUN_TEST(test_ldpc_interleave_burst_correction);
-    RUN_TEST(test_ldpc_qc_peg_basic);
-    RUN_TEST(test_ldpc_qc_peg_with_errors);
-    RUN_TEST(test_ldpc_qc_peg_various_rates);
-    RUN_TEST(test_ldpc_qc_peg_with_interleaver);
+    RUN_TEST(test_ldpc_qc_random_basic);
+    RUN_TEST(test_ldpc_qc_random_with_errors);
+    RUN_TEST(test_ldpc_qc_random_various_rates);
+    RUN_TEST(test_ldpc_qc_random_with_interleaver);
 
     return UNITY_END();
 }

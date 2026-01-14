@@ -1,8 +1,8 @@
 /*
  * libpoporon - ldpc.h
- *
+ * 
  * This file is part of libpoporon.
- *
+ * 
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */
@@ -25,7 +25,7 @@ extern "C" {
 #define POPORON_LDPC_RATE_5_6 4
 
 #define POPORON_LDPC_MATRIX_RANDOM 0
-#define POPORON_LDPC_MATRIX_QC_PEG 1
+#define POPORON_LDPC_MATRIX_QC_RANDOM 1
 
 typedef struct _poporon_ldpc_t poporon_ldpc_t;
 
@@ -39,7 +39,7 @@ typedef enum {
 
 typedef enum {
     PPRN_LDPC_RANDOM = POPORON_LDPC_MATRIX_RANDOM,
-    PPRN_LDPC_QC_PEG = POPORON_LDPC_MATRIX_QC_PEG,
+    PPRN_LDPC_QC_RANDOM = POPORON_LDPC_MATRIX_QC_RANDOM,
 } poporon_ldpc_matrix_type_t;
 
 typedef struct {

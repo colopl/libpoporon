@@ -374,7 +374,7 @@ typedef enum {
 // Matrix construction types
 typedef enum {
     PPRN_LDPC_RANDOM,   // Random parity check matrix
-    PPRN_LDPC_QC_PEG,   // Quasi-Cyclic Progressive Edge Growth
+    PPRN_LDPC_QC_RANDOM,   // Quasi-Cyclic with random shifts
 } poporon_ldpc_matrix_type_t;
 
 // Configuration

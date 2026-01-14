@@ -374,7 +374,7 @@ typedef enum {
 // 行列構成タイプ
 typedef enum {
     PPRN_LDPC_RANDOM,   // ランダムパリティ検査行列
-    PPRN_LDPC_QC_PEG,   // 準巡回プログレッシブエッジグロース
+    PPRN_LDPC_QC_RANDOM,   // ランダムシフトを用いた準巡回構造
 } poporon_ldpc_matrix_type_t;
 
 // 設定
