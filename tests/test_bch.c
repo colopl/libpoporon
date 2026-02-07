@@ -1,8 +1,8 @@
 /*
  * libpoporon - test_bch.c
- * 
+ *
  * This file is part of libpoporon.
- * 
+ *
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */
@@ -12,7 +12,8 @@
 #include <string.h>
 
 #include <poporon.h>
-#include <poporon/bch.h>
+
+#include "internal/common.h"
 
 #include "unity.h"
 #include "util.h"

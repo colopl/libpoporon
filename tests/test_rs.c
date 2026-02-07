@@ -1,8 +1,8 @@
 /*
  * libpoporon - test_rs.c
- * 
+ *
  * This file is part of libpoporon.
- * 
+ *
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */
@@ -13,7 +13,8 @@
 
 #include <poporon.h>
 #include <poporon/gf.h>
-#include <poporon/rs.h>
+
+#include "internal/common.h"
 
 #include "unity.h"
 #include "util.h"

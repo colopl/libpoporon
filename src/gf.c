@@ -1,8 +1,8 @@
 /*
  * libpoporon - gf.c
- * 
+ *
  * This file is part of libpoporon.
- * 
+ *
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */
@@ -59,8 +59,8 @@ extern poporon_gf_t *poporon_gf_create(uint8_t symbol_size, uint16_t generator_p
         return NULL;
     }
 
-    gf->exp2log[0] = gf->field_size; /* log(0) = -inf represented as field_size */
-    gf->log2exp[gf->field_size] = 0; /* exp(-inf) = 0 */
+    gf->exp2log[0] = gf->field_size;
+    gf->log2exp[gf->field_size] = 0;
 
     field_element = 1;
     for (i = 0; i < gf->field_size; i++) {

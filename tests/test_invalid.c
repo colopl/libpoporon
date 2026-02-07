@@ -1,8 +1,8 @@
 /*
  * libpoporon - test_invalid.c
- * 
+ *
  * This file is part of libpoporon.
- * 
+ *
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */
@@ -27,7 +27,7 @@ void tearDown(void)
 
 void test_poporon(void)
 {
-    TEST_ASSERT_NULL(poporon_create(0, 0, 0, 0, 0));
+    TEST_ASSERT_NULL(poporon_create(NULL));
     poporon_destroy(NULL);
 }
 

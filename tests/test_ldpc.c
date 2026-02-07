@@ -1,8 +1,8 @@
 /*
  * libpoporon - test_ldpc.c
- * 
+ *
  * This file is part of libpoporon.
- * 
+ *
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */
@@ -11,9 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <poporon/ldpc.h>
-
 #include <unity.h>
+
+#include "internal/ldpc.h"
 
 void setUp(void)
 {
@@ -291,7 +291,8 @@ static void test_ldpc_decode_soft_with_noise(void)
 
 static void test_ldpc_various_rates(void)
 {
-    poporon_ldpc_rate_t rates[] = {PPRN_LDPC_RATE_1_2, PPRN_LDPC_RATE_2_3, PPRN_LDPC_RATE_3_4, PPRN_LDPC_RATE_5_6};
+    poporon_ldpc_rate_t rates[] = {PPRN_LDPC_RATE_1_3, PPRN_LDPC_RATE_1_2, PPRN_LDPC_RATE_2_3, PPRN_LDPC_RATE_3_4,
+                                   PPRN_LDPC_RATE_5_6};
     poporon_ldpc_t *ldpc;
     uint32_t iterations;
     uint8_t *info, *parity, *codeword;
@@ -406,17 +407,17 @@ static void test_ldpc_null_params(void)
 static void test_ldpc_burst_resistant_config(void)
 {
     poporon_ldpc_t *ldpc;
-    poporon_ldpc_config_t config;
+    poporon_ldpc_params_t config;
     uint32_t iterations;
     uint8_t info[128], parity[256], codeword[256];
     size_t i;
 
-    TEST_ASSERT_TRUE(poporon_ldpc_config_burst_resistant(&config));
+    TEST_ASSERT_TRUE(poporon_ldpc_params_burst_resistant(&config));
     TEST_ASSERT_EQUAL(PPRN_LDPC_RANDOM, config.matrix_type);
-    TEST_ASSERT_TRUE(config.use_interleaver);
+    TEST_ASSERT_TRUE(config.use_inner_interleave);
     TEST_ASSERT_EQUAL(7, config.column_weight);
 
-    config.use_interleaver = false;
+    config.use_inner_interleave = false;
 
     ldpc = poporon_ldpc_create(128, PPRN_LDPC_RATE_1_2, &config);
     TEST_ASSERT_NOT_NULL(ldpc);
@@ -446,17 +447,17 @@ static void test_ldpc_burst_resistant_config(void)
 static void test_ldpc_burst_error_resistance(void)
 {
     poporon_ldpc_t *ldpc_default, *ldpc_burst_resistant;
-    poporon_ldpc_config_t default_config, burst_resistant_config;
+    poporon_ldpc_params_t default_config, burst_resistant_config;
     uint32_t iter_default, iter_burst_resistant;
     uint8_t info[256], parity_default[256], parity_burst_resistant[256], codeword_default[512],
         codeword_burst_resistant[512];
     int32_t default_success = 0, burst_resistant_success = 0, trials = 5;
     size_t i, burst_start, burst_len;
 
-    TEST_ASSERT_TRUE(poporon_ldpc_config_default(&default_config));
-    TEST_ASSERT_TRUE(poporon_ldpc_config_burst_resistant(&burst_resistant_config));
+    TEST_ASSERT_TRUE(poporon_ldpc_params_default(&default_config));
+    TEST_ASSERT_TRUE(poporon_ldpc_params_burst_resistant(&burst_resistant_config));
 
-    burst_resistant_config.use_interleaver = false;
+    burst_resistant_config.use_inner_interleave = false;
 
     ldpc_default = poporon_ldpc_create(256, PPRN_LDPC_RATE_1_2, &default_config);
     ldpc_burst_resistant = poporon_ldpc_create(256, PPRN_LDPC_RATE_1_2, &burst_resistant_config);
@@ -508,11 +509,11 @@ static void test_ldpc_burst_error_resistance(void)
 static void test_ldpc_interleave_api(void)
 {
     poporon_ldpc_t *ldpc;
-    poporon_ldpc_config_t config;
+    poporon_ldpc_params_t config;
     uint8_t info[128], parity[128], codeword[256], interleaved[256], deinterleaved[256];
     size_t i, codeword_size;
 
-    TEST_ASSERT_TRUE(poporon_ldpc_config_burst_resistant(&config));
+    TEST_ASSERT_TRUE(poporon_ldpc_params_burst_resistant(&config));
     ldpc = poporon_ldpc_create(128, PPRN_LDPC_RATE_1_2, &config);
     TEST_ASSERT_NOT_NULL(ldpc);
 
@@ -551,13 +552,13 @@ static void test_ldpc_interleave_api(void)
 static void test_ldpc_interleave_burst_correction(void)
 {
     poporon_ldpc_t *ldpc;
-    poporon_ldpc_config_t config;
+    poporon_ldpc_params_t config;
     uint32_t iterations;
     uint8_t info[128], parity[128], codeword[256], interleaved[256], received[256];
     size_t i;
 
-    TEST_ASSERT_TRUE(poporon_ldpc_config_burst_resistant(&config));
-    TEST_ASSERT_TRUE(config.use_interleaver);
+    TEST_ASSERT_TRUE(poporon_ldpc_params_burst_resistant(&config));
+    TEST_ASSERT_TRUE(config.use_inner_interleave);
 
     ldpc = poporon_ldpc_create(128, PPRN_LDPC_RATE_1_2, &config);
     TEST_ASSERT_NOT_NULL(ldpc);
@@ -591,12 +592,12 @@ static void test_ldpc_interleave_burst_correction(void)
 static void test_ldpc_qc_random_basic(void)
 {
     poporon_ldpc_t *ldpc;
-    poporon_ldpc_config_t config;
+    poporon_ldpc_params_t config;
     uint32_t iterations;
     uint8_t info[128], parity[128], codeword[256];
     size_t i;
 
-    TEST_ASSERT_TRUE(poporon_ldpc_config_default(&config));
+    TEST_ASSERT_TRUE(poporon_ldpc_params_default(&config));
     config.matrix_type = PPRN_LDPC_QC_RANDOM;
 
     ldpc = poporon_ldpc_create(128, PPRN_LDPC_RATE_1_2, &config);
@@ -622,12 +623,12 @@ static void test_ldpc_qc_random_basic(void)
 static void test_ldpc_qc_random_with_errors(void)
 {
     poporon_ldpc_t *ldpc;
-    poporon_ldpc_config_t config;
+    poporon_ldpc_params_t config;
     uint32_t iterations;
     uint8_t info[128], parity[128], codeword[256], original[256];
     size_t i;
 
-    TEST_ASSERT_TRUE(poporon_ldpc_config_default(&config));
+    TEST_ASSERT_TRUE(poporon_ldpc_params_default(&config));
     config.matrix_type = PPRN_LDPC_QC_RANDOM;
 
     ldpc = poporon_ldpc_create(128, PPRN_LDPC_RATE_1_2, &config);
@@ -657,14 +658,15 @@ static void test_ldpc_qc_random_with_errors(void)
 
 static void test_ldpc_qc_random_various_rates(void)
 {
-    poporon_ldpc_rate_t rates[] = {PPRN_LDPC_RATE_1_2, PPRN_LDPC_RATE_2_3, PPRN_LDPC_RATE_3_4, PPRN_LDPC_RATE_5_6};
+    poporon_ldpc_rate_t rates[] = {PPRN_LDPC_RATE_1_3, PPRN_LDPC_RATE_1_2, PPRN_LDPC_RATE_2_3, PPRN_LDPC_RATE_3_4,
+                                   PPRN_LDPC_RATE_5_6};
     poporon_ldpc_t *ldpc;
-    poporon_ldpc_config_t config;
+    poporon_ldpc_params_t config;
     uint8_t *info, *parity, *codeword;
     uint32_t iterations;
     size_t i, r, num_rates = sizeof(rates) / sizeof(rates[0]), info_size, parity_size, codeword_size;
 
-    TEST_ASSERT_TRUE(poporon_ldpc_config_default(&config));
+    TEST_ASSERT_TRUE(poporon_ldpc_params_default(&config));
     config.matrix_type = PPRN_LDPC_QC_RANDOM;
 
     for (r = 0; r < num_rates; r++) {
@@ -702,12 +704,12 @@ static void test_ldpc_qc_random_various_rates(void)
 static void test_ldpc_qc_random_with_interleaver(void)
 {
     poporon_ldpc_t *ldpc;
-    poporon_ldpc_config_t config;
+    poporon_ldpc_params_t config;
     uint32_t iterations;
     uint8_t info[128], parity[128], codeword[256], interleaved[256], received[256];
     size_t i;
 
-    TEST_ASSERT_TRUE(poporon_ldpc_config_burst_resistant(&config));
+    TEST_ASSERT_TRUE(poporon_ldpc_params_burst_resistant(&config));
     config.matrix_type = PPRN_LDPC_QC_RANDOM;
 
     ldpc = poporon_ldpc_create(128, PPRN_LDPC_RATE_1_2, &config);

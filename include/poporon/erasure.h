@@ -1,8 +1,8 @@
 /*
  * libpoporon - erasure.h
- * 
+ *
  * This file is part of libpoporon.
- * 
+ *
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */

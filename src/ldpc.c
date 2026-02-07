@@ -1,8 +1,8 @@
 /*
  * libpoporon - ldpc.c
- * 
+ *
  * This file is part of libpoporon.
- * 
+ *
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */
@@ -38,6 +38,10 @@
 static inline void get_rate_params(poporon_ldpc_rate_t rate, uint32_t *info_num, uint32_t *parity_num)
 {
     switch (rate) {
+    case PPRN_LDPC_RATE_1_3:
+        *info_num = 1;
+        *parity_num = 2;
+        break;
     case PPRN_LDPC_RATE_1_2:
         *info_num = 1;
         *parity_num = 1;
@@ -149,7 +153,7 @@ static inline bool build_interleaver(poporon_ldpc_t *ldpc)
     uint32_t depth, width, temp, seed, rval, *col_perm;
     size_t i, j, row, col, interleaved_pos;
 
-    if (!ldpc->config.use_interleaver) {
+    if (!ldpc->config.use_inner_interleave) {
         ldpc->interleaver.forward = NULL;
         ldpc->interleaver.inverse = NULL;
         ldpc->interleaver.size = 0;
@@ -189,7 +193,7 @@ static inline bool build_interleaver(poporon_ldpc_t *ldpc)
         col_perm[i] = (uint32_t)i;
     }
 
-    seed = (uint32_t)ldpc->codeword_bits;
+    seed = (uint32_t)(ldpc->config.seed ^ (uint64_t)ldpc->codeword_bits);
     rng = poporon_rng_create(XOSHIRO128PP, &seed, sizeof(seed));
     if (!rng) {
         pfree(col_perm);
@@ -229,6 +233,53 @@ static inline bool build_interleaver(poporon_ldpc_t *ldpc)
     return true;
 }
 
+static inline bool build_outer_interleaver(poporon_ldpc_t *ldpc)
+{
+    poporon_rng_t *rng;
+    uint32_t seed, rval, temp;
+    size_t i, j;
+
+    if (!ldpc->config.use_outer_interleave) {
+        ldpc->outer_interleaver.forward = NULL;
+        ldpc->outer_interleaver.inverse = NULL;
+        ldpc->outer_interleaver.size = 0;
+        return true;
+    }
+
+    ldpc->outer_interleaver.size = ldpc->info_bytes;
+    ldpc->outer_interleaver.forward = (uint32_t *)pmalloc(ldpc->info_bytes * sizeof(uint32_t));
+    ldpc->outer_interleaver.inverse = (uint32_t *)pmalloc(ldpc->info_bytes * sizeof(uint32_t));
+
+    if (!ldpc->outer_interleaver.forward || !ldpc->outer_interleaver.inverse) {
+        return false;
+    }
+
+    for (i = 0; i < ldpc->info_bytes; i++) {
+        ldpc->outer_interleaver.forward[i] = (uint32_t)i;
+    }
+
+    seed = (uint32_t)(ldpc->config.seed ^ (uint64_t)(ldpc->info_bits ^ 0xDEADBEEF));
+    rng = poporon_rng_create(XOSHIRO128PP, &seed, sizeof(seed));
+    if (!rng) {
+        return false;
+    }
+
+    for (i = ldpc->info_bytes - 1; i > 0; i--) {
+        poporon_rng_next(rng, &rval, sizeof(rval));
+        j = rval % (i + 1);
+        temp = ldpc->outer_interleaver.forward[i];
+        ldpc->outer_interleaver.forward[i] = ldpc->outer_interleaver.forward[j];
+        ldpc->outer_interleaver.forward[j] = temp;
+    }
+    poporon_rng_destroy(rng);
+
+    for (i = 0; i < ldpc->info_bytes; i++) {
+        ldpc->outer_interleaver.inverse[ldpc->outer_interleaver.forward[i]] = (uint32_t)i;
+    }
+
+    return true;
+}
+
 static inline bool build_parity_check_matrix_random(poporon_ldpc_t *ldpc, uint32_t col_weight)
 {
     poporon_rng_t *rng;
@@ -256,7 +307,7 @@ static inline bool build_parity_check_matrix_random(poporon_ldpc_t *ldpc, uint32
         return false;
     }
 
-    seed = 0;
+    seed = (uint32_t)ldpc->config.seed;
     rng = poporon_rng_create(XOSHIRO128PP, &seed, sizeof(seed));
     if (!rng) {
         pfree(col_counts);
@@ -287,7 +338,7 @@ static inline bool build_parity_check_matrix_random(poporon_ldpc_t *ldpc, uint32
 
     pmemset(col_counts, 0, ldpc->parity_matrix.num_checks * sizeof(uint32_t));
 
-    seed = 0;
+    seed = (uint32_t)ldpc->config.seed;
     rng = poporon_rng_create(XOSHIRO128PP, &seed, sizeof(seed));
     if (!rng) {
         pfree(col_counts);
@@ -406,7 +457,7 @@ static inline bool build_parity_check_matrix_qc(poporon_ldpc_t *ldpc, uint32_t c
         return false;
     }
 
-    seed = 0;
+    seed = (uint32_t)ldpc->config.seed;
     rng = poporon_rng_create(XOSHIRO128PP, &seed, sizeof(seed));
     if (!rng) {
         pfree(col_counts);
@@ -448,7 +499,7 @@ static inline bool build_parity_check_matrix_qc(poporon_ldpc_t *ldpc, uint32_t c
     pmemset(col_counts, 0, ldpc->parity_matrix.num_checks * sizeof(uint32_t));
 
     poporon_rng_destroy(rng);
-    seed = 0;
+    seed = (uint32_t)ldpc->config.seed;
     rng = poporon_rng_create(XOSHIRO128PP, &seed, sizeof(seed));
     if (!rng) {
         pfree(col_counts);
@@ -560,13 +611,22 @@ static inline bool allocate_messages(poporon_ldpc_t *ldpc)
         return false;
     }
 
-    if (ldpc->config.use_interleaver) {
+    if (ldpc->config.use_inner_interleave) {
         ldpc->temp_interleaved = (uint8_t *)pmalloc(ldpc->codeword_bytes);
         if (!ldpc->temp_interleaved) {
             return false;
         }
     } else {
         ldpc->temp_interleaved = NULL;
+    }
+
+    if (ldpc->config.use_outer_interleave) {
+        ldpc->temp_outer = (uint8_t *)pmalloc(ldpc->info_bytes);
+        if (!ldpc->temp_outer) {
+            return false;
+        }
+    } else {
+        ldpc->temp_outer = NULL;
     }
 
     return true;
@@ -717,7 +777,7 @@ static inline void make_hard_decision(poporon_ldpc_t *ldpc, uint8_t *codeword)
     }
 }
 
-extern bool poporon_ldpc_config_default(poporon_ldpc_config_t *config)
+extern bool poporon_ldpc_params_default(poporon_ldpc_params_t *config)
 {
     if (!config) {
         return false;
@@ -725,14 +785,16 @@ extern bool poporon_ldpc_config_default(poporon_ldpc_config_t *config)
 
     config->matrix_type = PPRN_LDPC_RANDOM;
     config->column_weight = DEFAULT_COL_WEIGHT;
-    config->use_interleaver = false;
+    config->use_inner_interleave = false;
+    config->use_outer_interleave = false;
     config->interleave_depth = 0;
     config->lifting_factor = 0;
+    config->seed = 0;
 
     return true;
 }
 
-extern bool poporon_ldpc_config_burst_resistant(poporon_ldpc_config_t *config)
+extern bool poporon_ldpc_params_burst_resistant(poporon_ldpc_params_t *config)
 {
     if (!config) {
         return false;
@@ -740,18 +802,20 @@ extern bool poporon_ldpc_config_burst_resistant(poporon_ldpc_config_t *config)
 
     config->matrix_type = PPRN_LDPC_RANDOM;
     config->column_weight = 7;
-    config->use_interleaver = true;
+    config->use_inner_interleave = true;
+    config->use_outer_interleave = true;
     config->interleave_depth = 0;
     config->lifting_factor = 0;
+    config->seed = 0;
 
     return true;
 }
 
 extern poporon_ldpc_t *poporon_ldpc_create(size_t block_size, poporon_ldpc_rate_t rate,
-                                           const poporon_ldpc_config_t *config)
+                                           const poporon_ldpc_params_t *config)
 {
     poporon_ldpc_t *ldpc;
-    poporon_ldpc_config_t default_config;
+    poporon_ldpc_params_t default_config;
     uint32_t info_num, parity_num;
 
     if (block_size < MIN_BLOCK_SIZE || block_size > MAX_BLOCK_SIZE || (block_size % 4) != 0) {
@@ -772,7 +836,7 @@ extern poporon_ldpc_t *poporon_ldpc_create(size_t block_size, poporon_ldpc_rate_
     if (config) {
         ldpc->config = *config;
     } else {
-        poporon_ldpc_config_default(&default_config);
+        poporon_ldpc_params_default(&default_config);
         ldpc->config = default_config;
     }
 
@@ -790,6 +854,11 @@ extern poporon_ldpc_t *poporon_ldpc_create(size_t block_size, poporon_ldpc_rate_
     }
 
     if (!build_interleaver(ldpc)) {
+        poporon_ldpc_destroy(ldpc);
+        return NULL;
+    }
+
+    if (!build_outer_interleaver(ldpc)) {
         poporon_ldpc_destroy(ldpc);
         return NULL;
     }
@@ -815,11 +884,14 @@ extern void poporon_ldpc_destroy(poporon_ldpc_t *ldpc)
     pfree(ldpc->parity_matrix_cols.edge_idx);
     pfree(ldpc->interleaver.forward);
     pfree(ldpc->interleaver.inverse);
+    pfree(ldpc->outer_interleaver.forward);
+    pfree(ldpc->outer_interleaver.inverse);
     pfree(ldpc->msg.check_to_var);
     pfree(ldpc->msg.var_to_check);
     pfree(ldpc->msg.llr_total);
     pfree(ldpc->temp_codeword);
     pfree(ldpc->temp_interleaved);
+    pfree(ldpc->temp_outer);
     pfree(ldpc);
 }
 
@@ -911,7 +983,7 @@ extern bool poporon_ldpc_decode_hard(poporon_ldpc_t *ldpc, uint8_t *codeword, ui
     }
 
     working_codeword = ldpc->temp_codeword;
-    if (ldpc->config.use_interleaver && ldpc->interleaver.inverse) {
+    if (ldpc->config.use_inner_interleave && ldpc->interleaver.inverse) {
         deinterleave_bits(ldpc, codeword, working_codeword);
     } else {
         pmemcpy(working_codeword, codeword, ldpc->codeword_bytes);
@@ -968,7 +1040,7 @@ extern bool poporon_ldpc_decode_soft(poporon_ldpc_t *ldpc, const int8_t *llr, ui
     }
 
     working_llr = NULL;
-    if (ldpc->config.use_interleaver && ldpc->interleaver.inverse) {
+    if (ldpc->config.use_inner_interleave && ldpc->interleaver.inverse) {
         working_llr = (int8_t *)pmalloc(ldpc->codeword_bits);
         if (!working_llr) {
             return false;
@@ -1017,7 +1089,7 @@ extern bool poporon_ldpc_has_interleaver(const poporon_ldpc_t *ldpc)
     if (!ldpc) {
         return false;
     }
-    return ldpc->config.use_interleaver && ldpc->interleaver.forward != NULL;
+    return ldpc->config.use_inner_interleave && ldpc->interleaver.forward != NULL;
 }
 
 extern bool poporon_ldpc_interleave(const poporon_ldpc_t *ldpc, const uint8_t *input, uint8_t *output)

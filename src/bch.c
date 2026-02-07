@@ -1,14 +1,11 @@
 /*
  * libpoporon - bch.c
- * 
+ *
  * This file is part of libpoporon.
- * 
+ *
  * Author: Go Kudo <zeriyoshi@gmail.com>
  * SPDX-License-Identifier: MIT
  */
-
-#include <poporon/bch.h>
-#include <poporon/gf.h>
 
 #include "internal/common.h"
 
@@ -82,7 +79,7 @@ static inline int32_t bch_berlekamp_massey(poporon_bch_t *bch, const uint16_t *s
 {
     poporon_gf_t *gf;
     uint16_t current[BCH_MAX_POLY], prev[BCH_MAX_POLY], temp[BCH_MAX_POLY], prev_discrepancy, discrepancy, log_mult,
-        multiplier;
+        multiplier, log_sum, log_product;
     int32_t error_count, shift, syndrome_count, iteration, i;
 
     gf = bch->gf;
@@ -102,7 +99,7 @@ static inline int32_t bch_berlekamp_massey(poporon_bch_t *bch, const uint16_t *s
 
         for (i = 1; i <= error_count; i++) {
             if (current[i] != 0 && syndromes[iteration - i] != 0) {
-                uint16_t log_sum = (gf->exp2log[current[i]] + gf->exp2log[syndromes[iteration - i]]) % gf->field_size;
+                log_sum = (gf->exp2log[current[i]] + gf->exp2log[syndromes[iteration - i]]) % gf->field_size;
                 discrepancy ^= gf->log2exp[log_sum];
             }
         }
@@ -118,7 +115,7 @@ static inline int32_t bch_berlekamp_massey(poporon_bch_t *bch, const uint16_t *s
 
                 for (i = 0; i < BCH_MAX_POLY - shift; i++) {
                     if (prev[i] != 0) {
-                        uint16_t log_product = (gf->exp2log[prev[i]] + gf->exp2log[multiplier]) % gf->field_size;
+                        log_product = (gf->exp2log[prev[i]] + gf->exp2log[multiplier]) % gf->field_size;
                         current[i + shift] ^= gf->log2exp[log_product];
                     }
                 }
@@ -130,7 +127,7 @@ static inline int32_t bch_berlekamp_massey(poporon_bch_t *bch, const uint16_t *s
             } else {
                 for (i = 0; i < BCH_MAX_POLY - shift; i++) {
                     if (prev[i] != 0) {
-                        uint16_t log_product = (gf->exp2log[prev[i]] + gf->exp2log[multiplier]) % gf->field_size;
+                        log_product = (gf->exp2log[prev[i]] + gf->exp2log[multiplier]) % gf->field_size;
                         current[i + shift] ^= gf->log2exp[log_product];
                     }
                 }

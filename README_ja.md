@@ -67,15 +67,11 @@ ctest --test-dir build --output-on-failure
 
 int main(void) {
     // RS(255, 223) - 32 パリティシンボル、最大 16 エラーを訂正可能
-    poporon_t *pprn = poporon_create(
-        8,      // symbol_size（シンボルあたりのビット数）
-        0x11D,  // generator_polynomial
-        1,      // first_consecutive_root
-        1,      // primitive_element
-        32      // num_roots（パリティシンボル数）
-    );
+    poporon_config_t *config = poporon_config_rs_default();
+    poporon_t *pprn = poporon_create(config);
     if (!pprn) {
         fprintf(stderr, "poporon インスタンスの作成に失敗しました\n");
+        poporon_config_destroy(config);
         return 1;
     }
 
@@ -86,7 +82,7 @@ int main(void) {
     memcpy(data, "Hello, Reed-Solomon!", 20);
 
     // エンコード - パリティを生成
-    poporon_encode_u8(pprn, data, sizeof(data), parity);
+    poporon_encode(pprn, data, sizeof(data), parity);
 
     // エラーをシミュレート
     data[0] ^= 0xFF;
@@ -94,12 +90,13 @@ int main(void) {
 
     // デコード - エラーを訂正
     size_t corrected_num = 0;
-    if (poporon_decode_u8(pprn, data, sizeof(data), parity, &corrected_num)) {
+    if (poporon_decode(pprn, data, sizeof(data), parity, &corrected_num)) {
         printf("%zu 個のエラーを訂正しました\n", corrected_num);
         printf("デコード結果: %s\n", data);
     }
 
     poporon_destroy(pprn);
+    poporon_config_destroy(config);
     return 0;
 }
 ```
@@ -107,44 +104,40 @@ int main(void) {
 ### BCH エンコードとデコード
 
 ```c
-#include <poporon/bch.h>
+#include <poporon.h>
 #include <stdio.h>
 
 int main(void) {
-    // t=3 の誤り訂正能力を持つ BCH(15, k) を作成
-    poporon_bch_t *bch = poporon_bch_create(
-        4,      // symbol_size（m、体 GF(2^m)）
-        0x13,   // generator_polynomial
-        3       // correction_capability（t エラー）
-    );
-    if (!bch) {
+    // t=3 の誤り訂正能力を持つ BCH(15, 5) を作成
+    poporon_config_t *config = poporon_config_bch_default();
+    poporon_t *pprn = poporon_create(config);
+    if (!pprn) {
         fprintf(stderr, "BCH インスタンスの作成に失敗しました\n");
+        poporon_config_destroy(config);
         return 1;
     }
 
-    printf("コードワード長: %u\n", poporon_bch_get_codeword_length(bch));
-    printf("データ長: %u\n", poporon_bch_get_data_length(bch));
-    printf("訂正能力: %u エラー\n", poporon_bch_get_correction_capability(bch));
+    printf("FEC タイプ: %d\n", poporon_get_fec_type(pprn));
+    printf("パリティサイズ: %zu バイト\n", poporon_get_parity_size(pprn));
+    printf("情報サイズ: %zu バイト\n", poporon_get_info_size(pprn));
 
     // データをエンコード
-    uint32_t data = 21;
-    uint32_t codeword;
-    poporon_bch_encode(bch, data, &codeword);
-    printf("元のコードワード: 0x%04X\n", codeword);
+    uint8_t data[1] = {21};
+    uint8_t parity[4];
+    poporon_encode(pprn, data, 1, parity);
 
-    // 2 ビットエラーをシミュレート
-    uint32_t corrupted = codeword ^ (1 << 3) ^ (1 << 7);
-    printf("破損: 0x%04X\n", corrupted);
+    // ビットエラーをシミュレート
+    data[0] ^= 0x0A;
 
     // デコードして訂正
-    uint32_t corrected;
-    int32_t num_errors;
-    if (poporon_bch_decode(bch, corrupted, &corrected, &num_errors)) {
-        printf("%d 個のエラーを訂正: 0x%04X\n", num_errors, corrected);
-        printf("抽出データ: %u\n", poporon_bch_extract_data(bch, corrected));
+    size_t corrected = 0;
+    if (poporon_decode(pprn, data, 1, parity, &corrected)) {
+        printf("%zu 個のエラーを訂正\n", corrected);
+        printf("復元データ: %u\n", data[0]);
     }
 
-    poporon_bch_destroy(bch);
+    poporon_destroy(pprn);
+    poporon_config_destroy(config);
     return 0;
 }
 ```
@@ -152,67 +145,54 @@ int main(void) {
 ### LDPC エンコードとデコード
 
 ```c
-#include <poporon/ldpc.h>
+#include <poporon.h>
 #include <stdio.h>
 #include <string.h>
 
 int main(void) {
-    // レート 1/2（50% 冗長）の LDPC エンコーダを作成
-    poporon_ldpc_t *ldpc = poporon_ldpc_create(
-        128,                  // block_size（バイト、4 の倍数である必要あり）
-        PPRN_LDPC_RATE_1_2,   // コードレート
-        NULL                  // config（デフォルトは NULL）
-    );
-    if (!ldpc) {
+    // レート 1/2（100% 冗長）の LDPC エンコーダを作成
+    poporon_config_t *config = poporon_config_ldpc_default(128, PPRN_LDPC_RATE_1_2);
+    poporon_t *pprn = poporon_create(config);
+    if (!pprn) {
         fprintf(stderr, "LDPC インスタンスの作成に失敗しました\n");
+        poporon_config_destroy(config);
         return 1;
     }
 
-    size_t info_size = poporon_ldpc_info_size(ldpc);
-    size_t parity_size = poporon_ldpc_parity_size(ldpc);
-    size_t codeword_size = poporon_ldpc_codeword_size(ldpc);
+    size_t info_size = poporon_get_info_size(pprn);
+    size_t parity_size = poporon_get_parity_size(pprn);
 
     printf("情報サイズ: %zu バイト\n", info_size);
     printf("パリティサイズ: %zu バイト\n", parity_size);
-    printf("コードワードサイズ: %zu バイト\n", codeword_size);
 
     // バッファを準備
-    uint8_t *info = malloc(info_size);
+    uint8_t *data = malloc(info_size);
     uint8_t *parity = malloc(parity_size);
-    uint8_t *codeword = malloc(codeword_size);
 
     // データを初期化
     for (size_t i = 0; i < info_size; i++) {
-        info[i] = (uint8_t)(i * 17 + 23);
+        data[i] = (uint8_t)(i * 17 + 23);
     }
 
     // エンコード
-    poporon_ldpc_encode(ldpc, info, parity);
-
-    // コードワードを作成（info + parity）
-    memcpy(codeword, info, info_size);
-    memcpy(codeword + info_size, parity, parity_size);
-
-    // コードワードが有効か検証
-    if (poporon_ldpc_check(ldpc, codeword)) {
-        printf("コードワードは有効です\n");
-    }
+    poporon_encode(pprn, data, 128, parity);
 
     // エラーをシミュレート
-    codeword[0] ^= 0x01;
-    codeword[10] ^= 0x80;
-    codeword[20] ^= 0x40;
+    data[0] ^= 0x01;
+    data[10] ^= 0x80;
+    data[20] ^= 0x40;
 
     // 反復ビリーフプロパゲーションでデコード
-    uint32_t iterations;
-    if (poporon_ldpc_decode_hard(ldpc, codeword, 50, &iterations)) {
+    size_t corrected = 0;
+    if (poporon_decode(pprn, data, 128, parity, &corrected)) {
+        uint32_t iterations = poporon_get_iterations_used(pprn);
         printf("%u 回の反復でデコード成功\n", iterations);
     }
 
-    free(info);
+    free(data);
     free(parity);
-    free(codeword);
-    poporon_ldpc_destroy(ldpc);
+    poporon_destroy(pprn);
+    poporon_config_destroy(config);
     return 0;
 }
 ```
@@ -220,55 +200,43 @@ int main(void) {
 ### バースト誤り耐性を持つ LDPC
 
 ```c
-#include <poporon/ldpc.h>
+#include <poporon.h>
 #include <stdio.h>
 #include <string.h>
 
 int main(void) {
-    // バースト誤り耐性 LDPC を設定
-    poporon_ldpc_config_t config;
-    poporon_ldpc_config_burst_resistant(&config);
-    // config は column_weight=7, use_interleaver=true を持つ
+    // コンビニエンス関数でバースト誤り耐性 LDPC を作成
+    poporon_config_t *config = poporon_config_ldpc_burst_resistant(128, PPRN_LDPC_RATE_1_2);
+    poporon_t *pprn = poporon_create(config);
 
-    poporon_ldpc_t *ldpc = poporon_ldpc_create(128, PPRN_LDPC_RATE_1_2, &config);
+    size_t info_size = poporon_get_info_size(pprn);
+    size_t parity_size = poporon_get_parity_size(pprn);
 
-    size_t info_size = poporon_ldpc_info_size(ldpc);
-    size_t parity_size = poporon_ldpc_parity_size(ldpc);
-    size_t codeword_size = poporon_ldpc_codeword_size(ldpc);
-
-    uint8_t *info = malloc(info_size);
+    uint8_t *data = malloc(info_size);
     uint8_t *parity = malloc(parity_size);
-    uint8_t *codeword = malloc(codeword_size);
-    uint8_t *interleaved = malloc(codeword_size);
 
     // 初期化とエンコード
     for (size_t i = 0; i < info_size; i++) {
-        info[i] = (uint8_t)i;
+        data[i] = (uint8_t)i;
     }
-    poporon_ldpc_encode(ldpc, info, parity);
-
-    memcpy(codeword, info, info_size);
-    memcpy(codeword + info_size, parity, parity_size);
-
-    // 送信前にインターリーブ
-    poporon_ldpc_interleave(ldpc, codeword, interleaved);
+    poporon_encode(pprn, data, 128, parity);
 
     // バースト誤りをシミュレート（連続バイトの破損）
-    for (size_t i = 40; i < 44; i++) {
-        interleaved[i] ^= 0xFF;
+    for (size_t i = 10; i < 14; i++) {
+        data[i] ^= 0xFF;
     }
 
-    // デコード（デインターリーブは自動的に行われる）
-    uint32_t iterations;
-    if (poporon_ldpc_decode_hard(ldpc, interleaved, 100, &iterations)) {
+    // デコード — インターリーブ/デインターリーブは自動的に処理される
+    size_t corrected = 0;
+    if (poporon_decode(pprn, data, 128, parity, &corrected)) {
+        uint32_t iterations = poporon_get_iterations_used(pprn);
         printf("バースト誤りを %u 回の反復で訂正\n", iterations);
     }
 
-    free(info);
+    free(data);
     free(parity);
-    free(codeword);
-    free(interleaved);
-    poporon_ldpc_destroy(ldpc);
+    poporon_destroy(pprn);
+    poporon_config_destroy(config);
     return 0;
 }
 ```
@@ -301,128 +269,103 @@ int main(void) {
 
 ## API リファレンス
 
-### Reed-Solomon 型
+### コア型
 
 ```c
-typedef struct _poporon_t poporon_t;         // メインの Reed-Solomon コーデック
-typedef struct _poporon_erasure_t poporon_erasure_t;  // イレージャー位置の追跡
-typedef struct _poporon_gf_t poporon_gf_t;   // ガロア体演算
-typedef struct _poporon_rs_t poporon_rs_t;   // Reed-Solomon パラメータ
-```
+typedef struct _poporon_t poporon_t;                 // 統合 FEC コーデックハンドル
+typedef struct _poporon_config_t poporon_config_t;   // 不透明な設定オブジェクト
+typedef struct _poporon_erasure_t poporon_erasure_t; // イレージャー位置の追跡
+typedef struct _poporon_gf_t poporon_gf_t;           // ガロア体演算
+typedef uint32_t poporon_buildtime_t;
 
-### Reed-Solomon 関数
-
-```c
-// コーデックの作成/破棄
-poporon_t *poporon_create(uint8_t symbol_size, uint16_t generator_polynomial,
-                          uint16_t first_consecutive_root, uint16_t primitive_element,
-                          uint8_t num_roots);
-void poporon_destroy(poporon_t *poporon);
-
-// データをエンコード
-bool poporon_encode_u8(poporon_t *pprn, uint8_t *data, size_t size, uint8_t *parity);
-
-// データをデコード
-bool poporon_decode_u8(poporon_t *pprn, uint8_t *data, size_t size,
-                       uint8_t *parity, size_t *corrected_num);
-bool poporon_decode_u8_with_erasure(poporon_t *pprn, uint8_t *data, size_t size,
-                                    uint8_t *parity, poporon_erasure_t *eras,
-                                    size_t *corrected_num);
-bool poporon_decode_u8_with_syndrome(poporon_t *pprn, uint8_t *data, uint8_t *parity,
-                                     size_t size, uint16_t *syndrome,
-                                     size_t *corrected_num);
-
-// ユーティリティ
-uint32_t poporon_version_id(void);
-poporon_buildtime_t poporon_buildtime(void);
-```
-
-### BCH 関数
-
-```c
-// BCH コーデックの作成/破棄
-poporon_bch_t *poporon_bch_create(uint8_t symbol_size, uint16_t generator_polynomial,
-                                  uint8_t correction_capability);
-void poporon_bch_destroy(poporon_bch_t *bch);
-
-// パラメータを取得
-uint16_t poporon_bch_get_codeword_length(const poporon_bch_t *bch);
-uint16_t poporon_bch_get_data_length(const poporon_bch_t *bch);
-uint8_t poporon_bch_get_correction_capability(const poporon_bch_t *bch);
-
-// エンコード/デコード
-bool poporon_bch_encode(poporon_bch_t *bch, uint32_t data, uint32_t *codeword);
-bool poporon_bch_decode(poporon_bch_t *bch, uint32_t received,
-                        uint32_t *corrected, int32_t *num_errors);
-uint32_t poporon_bch_extract_data(const poporon_bch_t *bch, uint32_t codeword);
+// FEC アルゴリズムタイプ
+typedef enum {
+    PPLN_FEC_RS      = 1,    // Reed-Solomon
+    PPLN_FEC_LDPC    = 2,    // 低密度パリティ検査
+    PPLN_FEC_BCH     = 3,    // ボーズ・チョードリ・ホッケンゲム
+    PPLN_FEC_UNKNOWN = 255,
+} poporon_fec_type_t;
 ```
 
 ### LDPC 型と定数
 
 ```c
-typedef struct _poporon_ldpc_t poporon_ldpc_t;
-
 // コードレート
 typedef enum {
-    PPRN_LDPC_RATE_1_2,  // 50% 冗長
-    PPRN_LDPC_RATE_2_3,  // 33% 冗長
-    PPRN_LDPC_RATE_3_4,  // 25% 冗長
-    PPRN_LDPC_RATE_4_5,  // 20% 冗長
-    PPRN_LDPC_RATE_5_6,  // 17% 冗長
+    PPRN_LDPC_RATE_1_3,  // 200% 冗長
+    PPRN_LDPC_RATE_1_2,  // 100% 冗長
+    PPRN_LDPC_RATE_2_3,  // 50% 冗長
+    PPRN_LDPC_RATE_3_4,  // 33% 冗長
+    PPRN_LDPC_RATE_4_5,  // 25% 冗長
+    PPRN_LDPC_RATE_5_6,  // 20% 冗長
 } poporon_ldpc_rate_t;
 
 // 行列構成タイプ
 typedef enum {
-    PPRN_LDPC_RANDOM,   // ランダムパリティ検査行列
-    PPRN_LDPC_QC_RANDOM,   // ランダムシフトを用いた準巡回構造
+    PPRN_LDPC_RANDOM,     // ランダムパリティ検査行列
+    PPRN_LDPC_QC_RANDOM,  // ランダムシフトを用いた準巡回構造
 } poporon_ldpc_matrix_type_t;
-
-// 設定
-typedef struct {
-    poporon_ldpc_matrix_type_t matrix_type;
-    uint32_t column_weight;      // パリティ行列の密度（3-8）
-    bool use_interleaver;        // バースト耐性のためインターリーブを有効化
-    uint32_t interleave_depth;   // インターリーブ深度（0 で自動）
-    uint32_t lifting_factor;     // QC-LDPC リフティング係数（0 で自動）
-} poporon_ldpc_config_t;
 ```
 
-### LDPC 関数
+### 設定関数
 
 ```c
-// 設定ヘルパー
-bool poporon_ldpc_config_default(poporon_ldpc_config_t *config);
-bool poporon_ldpc_config_burst_resistant(poporon_ldpc_config_t *config);
+// Reed-Solomon 設定
+poporon_config_t *poporon_rs_config_create(uint8_t symbol_size, uint16_t generator_polynomial,
+                                           uint16_t first_consecutive_root, uint16_t primitive_element,
+                                           uint8_t num_roots, poporon_erasure_t *erasure,
+                                           uint16_t *syndrome);
+poporon_config_t *poporon_config_rs_default(void);  // RS(255, 223)、32 パリティシンボル
 
-// 作成/破棄
-poporon_ldpc_t *poporon_ldpc_create(size_t block_size, poporon_ldpc_rate_t rate,
-                                    const poporon_ldpc_config_t *config);
-void poporon_ldpc_destroy(poporon_ldpc_t *ldpc);
+// LDPC 設定
+poporon_config_t *poporon_ldpc_config_create(size_t block_size, poporon_ldpc_rate_t rate,
+                                             poporon_ldpc_matrix_type_t matrix_type,
+                                             uint32_t column_weight, bool use_soft_decode,
+                                             bool use_outer_interleave, bool use_inner_interleave,
+                                             uint32_t interleave_depth, uint32_t lifting_factor,
+                                             uint32_t max_iterations, const int8_t *soft_llr,
+                                             size_t soft_llr_size, uint64_t seed);
+poporon_config_t *poporon_config_ldpc_default(size_t block_size, poporon_ldpc_rate_t rate);
+poporon_config_t *poporon_config_ldpc_burst_resistant(size_t block_size, poporon_ldpc_rate_t rate);
 
-// サイズを取得
-size_t poporon_ldpc_info_size(const poporon_ldpc_t *ldpc);
-size_t poporon_ldpc_codeword_size(const poporon_ldpc_t *ldpc);
-size_t poporon_ldpc_parity_size(const poporon_ldpc_t *ldpc);
+// BCH 設定
+poporon_config_t *poporon_bch_config_create(uint8_t symbol_size, uint16_t generator_polynomial,
+                                            uint8_t correction_capability);
+poporon_config_t *poporon_config_bch_default(void);  // BCH(15, 5)、t=3
 
-// エンコード
-bool poporon_ldpc_encode(poporon_ldpc_t *ldpc, const uint8_t *info, uint8_t *parity);
+// 設定を破棄（poporon_create 後に呼び出しても安全）
+void poporon_config_destroy(poporon_config_t *config);
+```
 
-// デコード
-bool poporon_ldpc_decode_hard(poporon_ldpc_t *ldpc, uint8_t *codeword,
-                              uint32_t max_iterations, uint32_t *iterations_used);
-bool poporon_ldpc_decode_soft(poporon_ldpc_t *ldpc, const int8_t *llr,
-                              uint8_t *codeword, uint32_t max_iterations,
-                              uint32_t *iterations_used);
+### コーデック関数
 
-// 検証
-bool poporon_ldpc_check(const poporon_ldpc_t *ldpc, const uint8_t *codeword);
+```c
+// コーデックの作成/破棄
+poporon_t *poporon_create(const poporon_config_t *config);
+void poporon_destroy(poporon_t *pprn);
 
-// インターリーブ
-bool poporon_ldpc_has_interleaver(const poporon_ldpc_t *ldpc);
-bool poporon_ldpc_interleave(const poporon_ldpc_t *ldpc,
-                             const uint8_t *input, uint8_t *output);
-bool poporon_ldpc_deinterleave(const poporon_ldpc_t *ldpc,
-                               const uint8_t *input, uint8_t *output);
+// データをエンコード
+bool poporon_encode(poporon_t *pprn, uint8_t *data, size_t size, uint8_t *parity);
+
+// データをデコード
+bool poporon_decode(poporon_t *pprn, uint8_t *data, size_t size,
+                    uint8_t *parity, size_t *corrected_num);
+```
+
+### クエリ関数
+
+```c
+poporon_fec_type_t poporon_get_fec_type(const poporon_t *pprn);
+size_t poporon_get_parity_size(const poporon_t *pprn);
+size_t poporon_get_info_size(const poporon_t *pprn);
+uint32_t poporon_get_iterations_used(const poporon_t *pprn);  // LDPC 専用（RS/BCH は 0）
+```
+
+### ユーティリティ関数
+
+```c
+uint32_t poporon_version_id(void);
+poporon_buildtime_t poporon_buildtime(void);
 ```
 
 ### イレージャー API
@@ -487,11 +430,12 @@ bool poporon_rng_next(poporon_rng_t *rng, void *dest, size_t size);
 
 | レート | 冗長度 | ブロックサイズ |
 |------|------------|-------------|
-| 1/2 | 50% | 32 - 8192 バイト |
-| 2/3 | 33% | 32 - 8192 バイト |
-| 3/4 | 25% | 32 - 8192 バイト |
-| 4/5 | 20% | 32 - 8192 バイト |
-| 5/6 | 17% | 32 - 8192 バイト |
+| 1/3 | 200% | 32 - 8192 バイト |
+| 1/2 | 100% | 32 - 8192 バイト |
+| 2/3 | 50% | 32 - 8192 バイト |
+| 3/4 | 33% | 32 - 8192 バイト |
+| 4/5 | 25% | 32 - 8192 バイト |
+| 5/6 | 20% | 32 - 8192 バイト |
 
 ## SIMD サポート
 
@@ -550,26 +494,24 @@ target_link_libraries(your_target PRIVATE path/to/libpoporon/build/libpoporon.a)
 ```
 libpoporon/
 ├── include/
-│   ├── poporon.h          # メイン公開ヘッダー
+│   ├── poporon.h          # メイン公開ヘッダー（統合 API）
 │   └── poporon/
-│       ├── bch.h          # BCH コーデック API
 │       ├── erasure.h      # イレージャー API
 │       ├── gf.h           # ガロア体 API
-│       ├── ldpc.h         # LDPC コーデック API
-│       ├── rng.h          # 乱数生成器 API
-│       └── rs.h           # Reed-Solomon API
+│       └── rng.h          # 乱数生成器 API
 ├── src/
 │   ├── bch.c              # BCH 実装
-│   ├── encode.c           # RS エンコード実装
-│   ├── decode.c           # Berlekamp-Massey による RS デコード
+│   ├── encode.c           # エンコード実装
+│   ├── decode.c           # Berlekamp-Massey によるデコード
 │   ├── erasure.c          # イレージャー処理
 │   ├── gf.c               # ガロア体実装
 │   ├── ldpc.c             # LDPC 実装
 │   ├── rng.c              # Xoshiro128++ RNG
 │   ├── rs.c               # Reed-Solomon コア
-│   ├── poporon.c          # メイン API 実装
+│   ├── poporon.c          # 統合 API 実装
 │   └── internal/
 │       ├── common.h       # 内部型とマクロ
+│       ├── config.h       # 設定の内部構造
 │       ├── ldpc.h         # LDPC 内部構造
 │       └── simd.h         # SIMD 抽象化
 ├── tests/                 # Unity を使用したテストスイート
@@ -578,9 +520,13 @@ libpoporon/
 │   ├── test_codec.c       # コーデックテスト
 │   ├── test_erasure.c     # イレージャーテスト
 │   ├── test_gf.c          # ガロア体テスト
+│   ├── test_invalid.c     # 無効入力テスト
 │   ├── test_ldpc.c        # LDPC テスト
 │   ├── test_rng.c         # RNG テスト
-│   └── test_rs.c          # Reed-Solomon テスト
+│   ├── test_rs.c          # Reed-Solomon テスト
+│   ├── test_unified.c     # 統合 API テスト
+│   ├── fec_compat.c       # FEC 互換性テスト
+│   └── util.h             # テストユーティリティ
 ├── cmake/                 # CMake モジュール
 │   ├── buildtime.cmake    # ビルドタイムスタンプ
 │   ├── emscripten.cmake   # WebAssembly サポート
